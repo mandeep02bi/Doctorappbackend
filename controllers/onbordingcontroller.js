@@ -15,9 +15,18 @@ exports.getbyid = (req,res)=>{
 };
 
 exports.create = (req,res)=>{
-    db.create(req.body , (err, results)=>{
+
+    if(!req.file){
+        return res.status(400).send({message:"Image is required"});
+    }
+    const data = {
+        image: req.file.filename,
+        heading: req.body.heading,
+        subheading: req.body.subheading
+    }
+    db.create(data , (err, results)=>{
         if(err) return res.send (err);
-        res.send({message:"Post created" , id:results.insertId});
+        res.json({message:"Post created" , id:results.insertId});
     });
 };
 
