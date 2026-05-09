@@ -1,4 +1,5 @@
 
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 
@@ -11,6 +12,11 @@ const onbordingroutes = require('./routes/onbordingroutes');
 const banner = require('./routes/banner');
 const reminder = require('./routes/reminderroutes');
 const appointment = require('./routes/appointmentroutes');
+const adminroutes = require('./routes/adminroutes');
+const authroutes = require('./routes/authroutes');
+
+app.use('/api', authroutes);
+app.use('/api', adminroutes);
 app.use('/api', onbordingroutes);
 app.use('/api', banner);
 app.use('/api',reminder);

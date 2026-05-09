@@ -2,7 +2,8 @@ const model = require('../model/appoitmentmodel');
 
 exports.create = (req,res)=>{
     const data = {
-        sender_id: req.body.sender_id,
+        // 🔧 FIX: sender_id should come from JWT user context.
+        sender_id: req.user.id,
         receiver_id: req.body.receiver_id,
         appointment_type: req.body.appointment_type,
         appointment_datetime: req.body.appointment_datetime
@@ -18,6 +19,10 @@ exports.create = (req,res)=>{
 
 exports.getbyreceiver = (req,res)=>{
     const receiver_id = req.params.receiver_id;
+    // ⚠️ IMPROVED: Restrict non-admin to own receiver records.
+    if(req.user.role !== 'admin' && Number(receiver_id) !== Number(req.user.id)){
+        return res.status(403).json({message:"Access denied for requested receiver"});
+    }
 
     model.getbyreceiver(receiver_id , (err,result)=>{
         if(err) return res.status(500).json({message:"Error fetching appointments for receiver" , error:err});
@@ -28,6 +33,10 @@ exports.getbyreceiver = (req,res)=>{
 
 exports.getbysender = (req,res)=>{
     const sender_id = req.params.sender_id;
+    // ⚠️ IMPROVED: Restrict non-admin to own sender records.
+    if(req.user.role !== 'admin' && Number(sender_id) !== Number(req.user.id)){
+        return res.status(403).json({message:"Access denied for requested sender"});
+    }
 
     model.getbysender(sender_id , (err,result)=>{
         if(err) return res.status(500).json({message:"Error fetching appointments for sender" , error:err});        
