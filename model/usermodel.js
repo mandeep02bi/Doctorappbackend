@@ -24,7 +24,6 @@ const user = {
         ], cb);
     },
 
-    // ➕ ADDED: Updates device info on every successful login.
     updatedevice:(id, device, cb)=>{
         const sql = `
             UPDATE user
@@ -47,19 +46,23 @@ const user = {
         db.query(sql, cb);
     },
 
+    getallusers:(cb)=>{
+        const sql = `SELECT * FROM user WHERE role != 'admin' ORDER BY id DESC`;
+        db.query(sql, cb);
+    },
+
     
     updatestatus:(id, status, cb)=>{
         const sql = `UPDATE user SET status = ? WHERE id = ?`;
         db.query(sql, [status, id], cb);
     },
 
-    // ➕ ADDED: Password update used after OTP verification.
+    
     updatepassword:(id, password, cb)=>{
         const sql = `UPDATE user SET password = ? WHERE id = ?`;
         db.query(sql, [password, id], cb);
     },
 
-    // ➕ ADDED: Basic profile API helper.
     findbyid:(id, cb)=>{
         const sql = `SELECT id, name, email, role, status, device_id, device_uuid, device_name, device_type, os_version FROM user WHERE id = ? LIMIT 1`;
         db.query(sql, [id], cb);

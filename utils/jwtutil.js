@@ -8,7 +8,7 @@ exports.generateaccesstoken = (user) => {
     },
 
     process.env.JWT_SECRET,
-    { expiresIn: "1m" },
+    { expiresIn: "30m" },
   );
 };
 
