@@ -14,6 +14,8 @@ const reminder = require('./routes/reminderroutes');
 const appointment = require('./routes/appointmentroutes');
 const adminroutes = require('./routes/adminroutes');
 const authroutes = require('./routes/authroutes');
+const blood = require('./routes/bloodroutes');
+const patient = require('./routes/patientroutes');
 
 app.use('/api', authroutes);
 app.use('/api', adminroutes);
@@ -21,6 +23,8 @@ app.use('/api', onbordingroutes);
 app.use('/api', banner);
 app.use('/api',reminder);
 app.use('/api', appointment);
+app.use('/api', blood);
+app.use('/api', patient);
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {

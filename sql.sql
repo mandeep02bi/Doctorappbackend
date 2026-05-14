@@ -553,6 +553,133 @@ VALUES
 
 
 -- =========================================================
+-- TABLE: Blood Group
+-- =========================================================
+-- Stores blood group information only from Admin
+-- =========================================================
+    
+DROP TABLE IF EXISTS `blood_grp`;
+
+CREATE TABLE blood_grp (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(10) NOT NULL UNIQUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+
+-- =========================================================
+-- SAMPLE DATA: blood_groups
+-- =========================================================
+
+INSERT INTO `blood_grp`
+(
+    `id`,
+    `name`,
+)
+VALUES
+
+(
+    1,
+    'name': 'O+',
+    'created_at': '2026-05-14T13:20:30.000Z'
+),
+
+(
+    2,
+    'name': 'A+',
+    'created_at': '2026-05-14T13:20:31.000Z'
+),
+
+(
+    3,
+    'name': 'B+',
+    'created_at': '2026-05-14T13:20:31.000Z'
+);
+
+
+-- =========================================================
+-- TABLE: patient
+-- =========================================================
+-- Stores patient information
+-- =========================================================
+
+DROP TABLE IF EXISTS `patient`;
+
+CREATE TABLE patients (
+
+    id INT AUTO_INCREMENT PRIMARY KEY,
+
+    name VARCHAR(100) NOT NULL,
+    age INT NOT NULL,
+    gender ENUM('male','female','other') NOT NULL,
+
+    phone VARCHAR(15) NOT NULL UNIQUE,
+    email VARCHAR(100) UNIQUE,
+
+    blood_group INT NOT NULL,
+
+    address TEXT,
+
+    created_by INT NOT NULL,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_patient_blood_group
+    FOREIGN KEY (blood_group)
+    REFERENCES blood_grp(id),
+
+    CONSTRAINT fk_patient_creator
+    FOREIGN KEY (created_by)
+    REFERENCES user(id)
+);
+
+
+
+-- =========================================================
+-- SAMPLE DATA: patient
+-- =========================================================
+
+INSERT INTO `patient`
+(
+    `name`,
+    `age`,
+    `gender`,
+    `phone`,
+    `email`,
+    `blood_group`,
+    `created_by`
+)
+VALUES
+
+(
+    1,
+    'name': 'Rahul',
+    'age': 25,
+    'gender': 'male',
+    'phone': '9999999999',
+    'email': 'rahul@gmail.com',
+    'blood_group': 'A+',
+    'address': 'Surat',
+    'created_by': 9,
+    'created_at': '2026-05-14T13:48:54.000Z'
+),
+
+(
+    2,
+    'name': 'Rohit',
+    'age': 20,
+    'gender': 'male',
+    'phone': '9995989699',
+    'email': 'rohit111@gmail.com',
+    'blood_group': 'B+',
+    'address': 'Ahmedabad',
+    'created_by': 9,
+    'created_at': '2026-05-14T14:24:39.000Z'
+)
+
+
+-- =========================================================
 -- DATABASE SETUP COMPLETED
 -- =========================================================
 -- Tables Included:
@@ -564,6 +691,8 @@ VALUES
 -- 5. reminder
 -- 6. banner
 -- 7. onboarding
+-- 8. blood_grp
+-- 9. patient
 --
 -- =========================================================
 -- END OF FILE

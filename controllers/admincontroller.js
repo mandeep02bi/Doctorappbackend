@@ -39,6 +39,7 @@ exports.getallusers = (req, res) => {
     return res.status(200).json({
       statuscode:200,
       message: "Users fetched successfully",
+      count: rows.length,
       data: rows
     });
   });
