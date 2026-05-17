@@ -5,6 +5,7 @@ const role = require('../middlewares/role');
 const ownership = require('../middlewares/ownership');
 const {
     createPrescription,
+    getAllPrescriptions,
     getPrescriptionById,
     updatePrescription,
     deletePrescription,
@@ -16,7 +17,8 @@ const {
 } = require('../controllers/prescription.controller');
 
 router.post('/', auth, role('Admin', 'Doctor'), createPrescription);
-router.get('/:id', auth, role('Admin', 'Doctor', 'Staff'), getPrescriptionById);       // ← Staff added
+router.get('/', auth, role('Admin', 'Doctor', 'Staff'), getAllPrescriptions);
+router.get('/:id', auth, role('Admin', 'Doctor', 'Staff'), getPrescriptionById);
 router.put('/:id', auth, role('Admin', 'Doctor'), ownership('prescriptions', 'doctor_id'), updatePrescription);
 router.delete('/:id', auth, role('Admin', 'Doctor'), ownership('prescriptions', 'doctor_id'), deletePrescription);
 

@@ -20,18 +20,28 @@ const createInvoice = asyncHandler(async (req, res) => {
     return success(res, 201, 'Invoice created', { id: result.insertId });
 });
 
-// GET /api/invoices
 const getAllInvoices = asyncHandler(async (req, res) => {
-    const [rows] = await pool.query(
-        `SELECT i.id, i.total_amount, i.status, i.description, i.created_at,
-                CONCAT(p.first_name, ' ', p.last_name) AS patient_name, p.patient_code,
-                CONCAT(u.first_name, ' ', u.last_name) AS created_by_name
-         FROM invoices i
-         INNER JOIN patients p ON p.id = i.patient_id
-         INNER JOIN users u ON u.id = i.created_by
-         WHERE i.isDeleted = false
-         ORDER BY i.created_at DESC`
-    );
+    const { patient_id } = req.query;
+
+    let query = `
+        SELECT i.id, i.total_amount, i.status, i.description, i.created_at,
+               CONCAT(p.first_name, ' ', p.last_name) AS patient_name, p.patient_code,
+               CONCAT(u.first_name, ' ', u.last_name) AS created_by_name
+        FROM invoices i
+        INNER JOIN patients p ON p.id = i.patient_id
+        INNER JOIN users u ON u.id = i.created_by
+        WHERE i.isDeleted = false`;
+
+    const params = [];
+
+    if (patient_id) {
+        query += ' AND i.patient_id = ?';
+        params.push(patient_id);
+    }
+
+    query += ' ORDER BY i.created_at DESC';
+
+    const [rows] = await pool.query(query, params);
 
     return success(res, 200, 'Invoices fetched', rows);
 });

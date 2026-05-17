@@ -20,18 +20,28 @@ const createReminder = asyncHandler(async (req, res) => {
     return success(res, 201, 'Reminder created', { id: result.insertId });
 });
 
-// GET /api/reminders
 const getAllReminders = asyncHandler(async (req, res) => {
-    const [rows] = await pool.query(
-        `SELECT r.id, r.title, r.description, r.remind_at, r.is_done, r.created_at,
-                CONCAT(p.first_name, ' ', p.last_name) AS patient_name, p.patient_code,
-                CONCAT(u.first_name, ' ', u.last_name) AS created_by_name
-         FROM reminders r
-         INNER JOIN patients p ON p.id = r.patient_id
-         INNER JOIN users u ON u.id = r.created_by
-         WHERE r.isDeleted = false
-         ORDER BY r.remind_at ASC`
-    );
+    const { patient_id } = req.query;
+
+    let query = `
+        SELECT r.id, r.title, r.description, r.remind_at, r.is_done, r.created_at,
+               CONCAT(p.first_name, ' ', p.last_name) AS patient_name, p.patient_code,
+               CONCAT(u.first_name, ' ', u.last_name) AS created_by_name
+        FROM reminders r
+        INNER JOIN patients p ON p.id = r.patient_id
+        INNER JOIN users u ON u.id = r.created_by
+        WHERE r.isDeleted = false`;
+
+    const params = [];
+
+    if (patient_id) {
+        query += ' AND r.patient_id = ?';
+        params.push(patient_id);
+    }
+
+    query += ' ORDER BY r.remind_at ASC';
+
+    const [rows] = await pool.query(query, params);
 
     return success(res, 200, 'Reminders fetched', rows);
 });

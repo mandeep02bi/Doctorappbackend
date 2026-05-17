@@ -6,7 +6,6 @@ const { success, error } = require('../utils/response');
 const createPrescription = asyncHandler(async (req, res) => {
     const { patient_id, appointment_id, diagnosis, notes } = req.body;
 
-    // Verify patient exists
     const [patient] = await pool.query('SELECT id FROM patients WHERE id = ? AND isDeleted = false', [patient_id]);
     if (patient.length === 0) {
         return error(res, 404, 'Patient not found');
@@ -21,7 +20,48 @@ const createPrescription = asyncHandler(async (req, res) => {
     return success(res, 201, 'Prescription created', { id: result.insertId });
 });
 
-// GET /api/prescriptions/:id
+// GET /api/prescriptions
+// GET /api/prescriptions?patient_id=1
+// GET /api/prescriptions?doctor_id=2
+const getAllPrescriptions = asyncHandler(async (req, res) => {
+    const { patient_id, doctor_id } = req.query;
+
+    let query = `
+        SELECT pr.id, pr.diagnosis, pr.notes, pr.created_at,
+               CONCAT(d.first_name, ' ', d.last_name) AS doctor_name,
+               d.user_code AS doctor_code,
+               CONCAT(p.first_name, ' ', p.last_name) AS patient_name,
+               p.patient_code
+        FROM prescriptions pr
+        INNER JOIN users d ON d.id = pr.doctor_id
+        INNER JOIN patients p ON p.id = pr.patient_id
+        WHERE pr.isDeleted = false`;
+
+    const params = [];
+
+    if (patient_id) {
+        query += ' AND pr.patient_id = ?';
+        params.push(patient_id);
+    }
+
+    if (doctor_id) {
+        query += ' AND pr.doctor_id = ?';
+        params.push(doctor_id);
+    }
+
+    // Doctor can only see own
+    if (req.user.role === 'Doctor' && !doctor_id) {
+        query += ' AND pr.doctor_id = ?';
+        params.push(req.user.id);
+    }
+
+    query += ' ORDER BY pr.created_at DESC';
+
+    const [rows] = await pool.query(query, params);
+
+    return success(res, 200, 'Prescriptions fetched', rows);
+});
+
 // GET /api/prescriptions/:id
 const getPrescriptionById = asyncHandler(async (req, res) => {
     let query = `
@@ -35,7 +75,6 @@ const getPrescriptionById = asyncHandler(async (req, res) => {
 
     const params = [req.params.id];
 
-    // Doctor can only see own prescriptions (Staff and Admin see all)
     if (req.user.role === 'Doctor') {
         query += ' AND pr.doctor_id = ?';
         params.push(req.user.id);
@@ -47,13 +86,11 @@ const getPrescriptionById = asyncHandler(async (req, res) => {
         return error(res, 404, 'Prescription not found');
     }
 
-    // Fetch medicines
     const [medicines] = await pool.query(
         'SELECT id, name, dosage, frequency, duration, instructions FROM prescription_medicines WHERE prescription_id = ?',
         [req.params.id]
     );
 
-    // Fetch lab tests
     const [labTests] = await pool.query(
         'SELECT id, test_name, notes FROM prescription_lab_tests WHERE prescription_id = ?',
         [req.params.id]
@@ -164,6 +201,6 @@ const deleteLabTest = asyncHandler(async (req, res) => {
 });
 
 module.exports = {
-    createPrescription, getPrescriptionById, updatePrescription, deletePrescription,
+    createPrescription, getAllPrescriptions, getPrescriptionById, updatePrescription, deletePrescription,
     addMedicine, updateMedicine, deleteMedicine, addLabTest, deleteLabTest,
 };

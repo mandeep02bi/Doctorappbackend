@@ -2,6 +2,8 @@
 
 **Base URL:** `http://localhost:5000/api`
 
+**Total Endpoints:** 67
+
 **Global Response Format (every API follows this):**
 ```json
 {
@@ -19,7 +21,7 @@ Authorization: Bearer <accessToken>
 
 ---
 
-## AUTH ENDPOINTS
+## AUTH ENDPOINTS (7)
 
 ---
 
@@ -61,13 +63,8 @@ Authorization: Bearer <accessToken>
 
 **Errors:**
 ```json
-// Role = Admin
 { "status": false, "status_code": 403, "message": "Admin registration is not allowed", "data": null }
-
-// Email already exists
 { "status": false, "status_code": 409, "message": "Email already registered", "data": null }
-
-// Invalid role
 { "status": false, "status_code": 400, "message": "Role must be Doctor or Staff", "data": null }
 ```
 
@@ -264,13 +261,159 @@ Authorization: Bearer <accessToken>
 
 ---
 
-## PATIENT ENDPOINTS
+## DOCTOR PROFILE ENDPOINTS (4)
 
 ---
 
-### 8. POST /api/patients
+### 8. GET /api/doctors
+**Why:** List all doctors in the clinic.
+**Where:** Staff booking appointment → doctor dropdown. Admin user management.
+**Who:** Staff, Doctor, Admin.
+
+**Success — 200:**
+```json
+{
+    "status": true,
+    "status_code": 200,
+    "message": "Doctors fetched",
+    "data": [
+        {
+            "id": 2,
+            "user_code": "DR0001",
+            "first_name": "Amit",
+            "last_name": "Sharma",
+            "email": "amit@doctor.com",
+            "phone": "9876543210",
+            "specialty": "General Physician",
+            "experience": "8 years",
+            "qualification": "MBBS, MD",
+            "profile_photo": null
+        },
+        {
+            "id": 3,
+            "user_code": "DR0002",
+            "first_name": "Priya",
+            "last_name": "Gupta",
+            "email": "priya@doctor.com",
+            "phone": "9876543211",
+            "specialty": "Cardiologist",
+            "experience": "12 years",
+            "qualification": "MBBS, MD, DM",
+            "profile_photo": null
+        }
+    ]
+}
+```
+
+**Frontend action:** Use in appointment booking dropdown. Also on "My Doctors" screen showing clinic doctors.
+
+---
+
+### 9. GET /api/doctors/profile
+**Why:** Doctor views their own extended profile (specialty, experience, qualification).
+**Where:** Doctor opens Profile Settings → shows basic info + professional info.
+**Who:** Doctor, Admin only.
+
+**Success — 200:**
+```json
+{
+    "status": true,
+    "status_code": 200,
+    "message": "Profile fetched",
+    "data": {
+        "id": 2,
+        "user_code": "DR0001",
+        "first_name": "Amit",
+        "last_name": "Sharma",
+        "email": "amit@doctor.com",
+        "phone": "9876543210",
+        "last_login_at": "2026-05-20T10:00:00.000Z",
+        "created_at": "2026-05-15T08:30:00.000Z",
+        "specialty": "General Physician",
+        "experience": "8 years",
+        "qualification": "MBBS, MD",
+        "profile_photo": null,
+        "updated_at": "2026-05-18T14:00:00.000Z"
+    }
+}
+```
+
+**Frontend action:** If `specialty` is null → show "Complete your profile" prompt → navigate to create profile form.
+
+---
+
+### 10. POST /api/doctors/profile
+**Why:** Doctor fills in professional info for the first time.
+**Where:** Profile Settings → first time setup → specialty, experience, qualification form → submit.
+**Who:** Doctor, Admin only.
+
+**Request:**
+```json
+{
+    "specialty": "General Physician",
+    "experience": "8 years",
+    "qualification": "MBBS, MD",
+    "profile_photo": null
+}
+```
+
+**Success — 201:**
+```json
+{
+    "status": true,
+    "status_code": 201,
+    "message": "Profile created",
+    "data": { "id": 1 }
+}
+```
+
+**Errors:**
+```json
+{ "status": false, "status_code": 409, "message": "Profile already exists, use PUT to update", "data": null }
+```
+
+**Frontend action:** Show toast → refresh profile screen.
+
+---
+
+### 11. PUT /api/doctors/profile
+**Why:** Doctor updates their professional info.
+**Where:** Profile Settings → edit icon → update form → save.
+**Who:** Doctor, Admin only.
+
+**Request:**
+```json
+{
+    "specialty": "Cardiologist",
+    "experience": "10 years",
+    "qualification": "MBBS, MD, DM Cardiology",
+    "profile_photo": null
+}
+```
+
+**Success — 200:**
+```json
+{
+    "status": true,
+    "status_code": 200,
+    "message": "Profile updated"
+}
+```
+
+**Errors:**
+```json
+{ "status": false, "status_code": 404, "message": "Profile not found, use POST to create first", "data": null }
+```
+
+---
+
+## PATIENT ENDPOINTS (7)
+
+---
+
+### 12. POST /api/patients
 **Why:** Create a new patient record.
-**Where:** Patients screen → "+" button → 3-step form (Personal Info → Vitals → Address) → submit.
+**Where:** Patients screen → "+" button → form (Personal Info, Vitals, Address) → submit.
 **Who:** Staff, Doctor, Admin.
 
 **Request:**
@@ -317,9 +460,9 @@ Authorization: Bearer <accessToken>
 
 ---
 
-### 9. GET /api/patients
+### 13. GET /api/patients
 **Why:** Get list of all patients.
-**Where:** Patients screen → loads on screen open. Shows patient cards list.
+**Where:** Patients screen → loads on screen open.
 **Who:** Staff, Doctor, Admin.
 
 **Success — 200:**
@@ -341,32 +484,19 @@ Authorization: Bearer <accessToken>
             "blood_group": "B+",
             "city": "Patna",
             "created_at": "2026-05-20T08:00:00.000Z"
-        },
-        {
-            "id": 2,
-            "patient_code": "PT0002",
-            "first_name": "Anita",
-            "last_name": "Singh",
-            "phone": "9988776644",
-            "gender": "Female",
-            "blood_group": "O+",
-            "city": "Patna",
-            "created_at": "2026-05-20T09:00:00.000Z"
         }
     ]
 }
 ```
 
-**Frontend action:** Render patient cards list. Each card shows initials avatar, name, patient_code, gender, age, blood group, city. Tap card → navigate to patient profile.
+**Frontend action:** Render patient cards. Tap card → navigate to patient profile.
 
 ---
 
-### 10. GET /api/patients/:id
+### 14. GET /api/patients/:id
 **Why:** Get full profile of one patient.
 **Where:** Patient profile screen → loads when user taps a patient card.
 **Who:** Staff, Doctor, Admin.
-
-**Example:** `GET /api/patients/1`
 
 **Success — 200:**
 ```json
@@ -400,56 +530,47 @@ Authorization: Bearer <accessToken>
 }
 ```
 
-**Errors:**
-```json
-{ "status": false, "status_code": 404, "message": "Patient not found", "data": null }
+**Frontend action:** Show full profile. Also load all tabs using patient_id:
 ```
-
-**Frontend action:** Show full patient profile — header (name, code, gender, age, blood group), vitals grid (height, weight, pulse, respiratory rate), details section (phone, email, allergies, address), quick action buttons (prescriptions, certificates, invoices, records).
+GET /api/prescriptions?patient_id=1
+GET /api/certificates?patient_id=1
+GET /api/records?patient_id=1
+GET /api/invoices?patient_id=1
+GET /api/reminders?patient_id=1
+GET /api/appointments?patient_id=1
+```
 
 ---
 
-### 11. PUT /api/patients/:id
+### 15. PUT /api/patients/:id
 **Why:** Update patient's info.
-**Where:** Patient profile screen → edit icon → edit form → save.
+**Where:** Patient profile → edit icon → edit form → save.
 **Who:** Staff, Admin only.
 
-**Request:** Same shape as POST /api/patients (send all fields).
+**Request:** Same shape as POST /api/patients.
 
 **Success — 200:**
 ```json
-{
-    "status": true,
-    "status_code": 200,
-    "message": "Patient updated"
-}
+{ "status": true, "status_code": 200, "message": "Patient updated" }
 ```
-
-**Frontend action:** Show toast → refresh patient profile.
 
 ---
 
-### 12. DELETE /api/patients/:id
+### 16. DELETE /api/patients/:id
 **Why:** Soft delete a patient.
-**Where:** Patient profile screen → "..." menu → "Delete patient" → confirm dialog.
+**Where:** Patient profile → "..." menu → "Delete patient" → confirm.
 **Who:** Staff, Admin only.
 
 **Success — 200:**
 ```json
-{
-    "status": true,
-    "status_code": 200,
-    "message": "Patient deleted"
-}
+{ "status": true, "status_code": 200, "message": "Patient deleted" }
 ```
-
-**Frontend action:** Show toast → navigate back to patients list → refresh list.
 
 ---
 
-### 13. GET /api/patients/search?q=
+### 17. GET /api/patients/search?q=
 **Why:** Search patients by name, phone, email, patient_code, or city.
-**Where:** Patients screen → search bar at top → user types → results update live.
+**Where:** Patients screen → search bar → user types → results update live.
 **Who:** Staff, Doctor, Admin.
 
 **Example:** `GET /api/patients/search?q=rajesh`
@@ -474,16 +595,14 @@ Authorization: Bearer <accessToken>
 }
 ```
 
-**Frontend action:** Debounce 300ms → call API on each keystroke → render filtered patient cards. If `data` is empty array → show "No patients found".
+**Frontend action:** Debounce 300ms → call on each keystroke → render filtered cards.
 
 ---
 
-### 14. GET /api/patients/:id/timeline
-**Why:** Get all events for a patient in chronological order — appointments, prescriptions, records, reminders.
-**Where:** Patient profile screen → "Timeline" tab.
+### 18. GET /api/patients/:id/timeline
+**Why:** Get all events for a patient in date order.
+**Where:** Patient profile → "Timeline" tab.
 **Who:** Staff, Doctor, Admin.
-
-**Example:** `GET /api/patients/1/timeline`
 
 **Success — 200:**
 ```json
@@ -500,21 +619,15 @@ Authorization: Bearer <accessToken>
 }
 ```
 
-**Frontend action:** Render vertical timeline with icons per type:
-- appointment → calendar icon
-- prescription → stethoscope icon
-- record → file icon
-- reminder → bell icon
-
-Tap any item → navigate to its detail screen.
+**Frontend action:** Render vertical timeline. Tap item → navigate to detail screen.
 
 ---
 
-## APPOINTMENT ENDPOINTS
+## APPOINTMENT ENDPOINTS (6)
 
 ---
 
-### 15. POST /api/appointments
+### 19. POST /api/appointments
 **Why:** Book an appointment for a patient with a doctor.
 **Where:** Appointments screen → "+" button → select patient, doctor, date, reason → submit.
 **Who:** Staff, Admin only.
@@ -540,20 +653,21 @@ Tap any item → navigate to its detail screen.
 }
 ```
 
-**Errors:**
-```json
-{ "status": false, "status_code": 404, "message": "Patient not found", "data": null }
-{ "status": false, "status_code": 404, "message": "Doctor not found", "data": null }
-```
-
-**Frontend action:** Show toast → navigate to appointments list. For patient_id and doctor_id → use dropdowns that fetch from GET /api/patients and GET /api/users?role=Doctor.
+**Frontend action:** For doctor_id dropdown → fetch from `GET /api/doctors`.
 
 ---
 
-### 16. GET /api/appointments
-**Why:** Get all appointments.
-**Where:** Appointments screen → loads on screen open.
+### 20. GET /api/appointments
+**Why:** Get appointments. Supports optional filters.
+**Where:** Appointments screen. Also inside patient profile (Appointments tab).
 **Who:** Staff sees all. Doctor sees own only. Admin sees all.
+
+**Variants:**
+```
+GET /api/appointments                    → all (Staff/Admin) or own (Doctor)
+GET /api/appointments?patient_id=1       → only PT0001's appointments
+GET /api/appointments?doctor_id=2        → only DR0001's appointments
+```
 
 **Success — 200:**
 ```json
@@ -577,15 +691,11 @@ Tap any item → navigate to its detail screen.
 }
 ```
 
-**Frontend action:** Render appointment cards with left color border based on status:
-- Pending → amber
-- Confirmed → blue
-- Completed → green
-- Cancelled → red
+**Frontend action:** Render cards with status color: Pending=amber, Confirmed=blue, Completed=green, Cancelled=red.
 
 ---
 
-### 17. GET /api/appointments/:id
+### 21. GET /api/appointments/:id
 **Why:** Get single appointment detail.
 **Where:** Tap on appointment card → detail screen.
 **Who:** Staff, Doctor (own only), Admin.
@@ -614,9 +724,8 @@ Tap any item → navigate to its detail screen.
 
 ---
 
-### 18. PUT /api/appointments/:id
+### 22. PUT /api/appointments/:id
 **Why:** Update appointment details.
-**Where:** Appointment detail → edit icon → edit form → save.
 **Who:** Staff, Admin only.
 
 **Request:**
@@ -635,36 +744,26 @@ Tap any item → navigate to its detail screen.
 
 ---
 
-### 19. PATCH /api/appointments/:id/status
-**Why:** Change only the status of an appointment.
-**Where:** Appointment card → status dropdown/buttons (Pending → Confirmed → Completed).
+### 23. PATCH /api/appointments/:id/status
+**Why:** Change only the status.
+**Where:** Appointment card → status dropdown.
 **Who:** Staff, Admin only.
 
 **Request:**
 ```json
-{
-    "status": "Confirmed"
-}
+{ "status": "Confirmed" }
 ```
-Valid values: `Pending`, `Confirmed`, `Completed`, `Cancelled`
+Valid: `Pending`, `Confirmed`, `Completed`, `Cancelled`
 
 **Success — 200:**
 ```json
 { "status": true, "status_code": 200, "message": "Status updated" }
 ```
 
-**Errors:**
-```json
-{ "status": false, "status_code": 400, "message": "Invalid status", "data": null }
-```
-
-**Frontend action:** Update the status badge color immediately → show toast.
-
 ---
 
-### 20. DELETE /api/appointments/:id
+### 24. DELETE /api/appointments/:id
 **Why:** Soft delete an appointment.
-**Where:** Appointment detail → "..." menu → "Delete" → confirm.
 **Who:** Staff, Admin only.
 
 **Success — 200:**
@@ -674,13 +773,13 @@ Valid values: `Pending`, `Confirmed`, `Completed`, `Cancelled`
 
 ---
 
-## PRESCRIPTION ENDPOINTS
+## PRESCRIPTION ENDPOINTS (10)
 
 ---
 
-### 21. POST /api/prescriptions
+### 25. POST /api/prescriptions
 **Why:** Doctor creates a new prescription for a patient.
-**Where:** Patient profile → "New Prescription" button → prescription form → save.
+**Where:** Patient profile → "New Prescription" button → form → save.
 **Who:** Doctor, Admin only.
 
 **Request:**
@@ -707,12 +806,47 @@ Valid values: `Pending`, `Confirmed`, `Completed`, `Cancelled`
 
 ---
 
-### 22. GET /api/prescriptions/:id
-**Why:** Get full prescription with medicines and lab tests.
-**Where:** Tap on prescription card → prescription detail screen.
-**Who:** Doctor (own only), Staff (read only), Admin.
+### 26. GET /api/prescriptions
+**Why:** Get prescriptions. Supports optional filters.
+**Where:** Patient profile → Prescriptions tab. Also standalone prescriptions screen.
+**Who:** Doctor sees own only. Staff reads all. Admin reads all.
 
-**Example:** `GET /api/prescriptions/1`
+**Variants:**
+```
+GET /api/prescriptions                    → all (Staff/Admin) or own (Doctor)
+GET /api/prescriptions?patient_id=1       → only PT0001's prescriptions
+GET /api/prescriptions?doctor_id=2        → only DR0001's prescriptions
+```
+
+**Success — 200:**
+```json
+{
+    "status": true,
+    "status_code": 200,
+    "message": "Prescriptions fetched",
+    "data": [
+        {
+            "id": 1,
+            "diagnosis": "Viral fever with mild dehydration",
+            "notes": "Advised rest for 5 days",
+            "created_at": "2026-05-20T10:30:00.000Z",
+            "doctor_name": "Amit Sharma",
+            "doctor_code": "DR0001",
+            "patient_name": "Rajesh Verma",
+            "patient_code": "PT0001"
+        }
+    ]
+}
+```
+
+**Frontend action:** Inside patient profile → auto-attach `?patient_id=${patientId}`. Staff sees all doctors. Doctor auto-sees own only.
+
+---
+
+### 27. GET /api/prescriptions/:id
+**Why:** Get full prescription with medicines and lab tests.
+**Where:** Tap on prescription card → detail screen.
+**Who:** Doctor (own only), Staff (read only), Admin.
 
 **Success — 200:**
 ```json
@@ -737,14 +871,6 @@ Valid values: `Pending`, `Confirmed`, `Completed`, `Cancelled`
                 "frequency": "Twice a day",
                 "duration": "5 days",
                 "instructions": "Take after meals"
-            },
-            {
-                "id": 2,
-                "name": "Cetirizine",
-                "dosage": "10mg",
-                "frequency": "Once a day",
-                "duration": "3 days",
-                "instructions": "Take before sleep"
             }
         ],
         "lab_tests": [
@@ -752,37 +878,23 @@ Valid values: `Pending`, `Confirmed`, `Completed`, `Cancelled`
                 "id": 1,
                 "test_name": "CBC (Complete Blood Count)",
                 "notes": "Check for infection markers"
-            },
-            {
-                "id": 2,
-                "test_name": "Dengue NS1 Antigen",
-                "notes": "Rule out dengue"
             }
         ]
     }
 }
 ```
 
-**Frontend action:**
-- Show prescription header (patient info, doctor info, diagnosis box)
-- Render medicines list with dosage pill, frequency, duration, instructions
-- Render lab tests list
-- Doctor sees edit/delete buttons. Staff sees read-only view.
-- Show "Download PDF" button at bottom (Phase 2).
+**Frontend action:** Doctor sees edit/delete buttons. Staff sees read-only.
 
 ---
 
-### 23. PUT /api/prescriptions/:id
+### 28. PUT /api/prescriptions/:id
 **Why:** Update diagnosis or notes.
-**Where:** Prescription detail → edit icon → edit form → save.
 **Who:** Doctor (own only), Admin. Ownership checked.
 
 **Request:**
 ```json
-{
-    "diagnosis": "Updated diagnosis",
-    "notes": "Updated notes"
-}
+{ "diagnosis": "Updated diagnosis", "notes": "Updated notes" }
 ```
 
 **Success — 200:**
@@ -790,16 +902,10 @@ Valid values: `Pending`, `Confirmed`, `Completed`, `Cancelled`
 { "status": true, "status_code": 200, "message": "Prescription updated" }
 ```
 
-**Errors:**
-```json
-{ "status": false, "status_code": 403, "message": "You can only modify your own data", "data": null }
-```
-
 ---
 
-### 24. DELETE /api/prescriptions/:id
-**Why:** Soft delete a prescription.
-**Who:** Doctor (own only), Admin. Ownership checked.
+### 29. DELETE /api/prescriptions/:id
+**Who:** Doctor (own only), Admin.
 
 **Success — 200:**
 ```json
@@ -808,10 +914,10 @@ Valid values: `Pending`, `Confirmed`, `Completed`, `Cancelled`
 
 ---
 
-### 25. POST /api/prescriptions/:id/medicines
-**Why:** Add a medicine to an existing prescription.
-**Where:** Prescription detail → "Add Medicine" button → medicine form → save.
-**Who:** Doctor (own only), Admin. Ownership checked.
+### 30. POST /api/prescriptions/:id/medicines
+**Why:** Add a medicine to a prescription.
+**Where:** Prescription detail → "Add Medicine" button → form → save.
+**Who:** Doctor (own only), Admin.
 
 **Request:**
 ```json
@@ -826,24 +932,14 @@ Valid values: `Pending`, `Confirmed`, `Completed`, `Cancelled`
 
 **Success — 201:**
 ```json
-{
-    "status": true,
-    "status_code": 201,
-    "message": "Medicine added",
-    "data": { "id": 1 }
-}
+{ "status": true, "status_code": 201, "message": "Medicine added", "data": { "id": 1 } }
 ```
-
-**Frontend action:** Append new medicine card to medicines list → show toast.
 
 ---
 
-### 26. PUT /api/prescriptions/:id/medicines/:medicineId
-**Why:** Update a specific medicine inside a prescription.
-**Where:** Medicine card → edit icon → edit form → save.
+### 31. PUT /api/prescriptions/:id/medicines/:medicineId
+**Why:** Update a specific medicine.
 **Who:** Doctor (own only), Admin.
-
-**Example:** `PUT /api/prescriptions/1/medicines/1`
 
 **Request:**
 ```json
@@ -863,9 +959,7 @@ Valid values: `Pending`, `Confirmed`, `Completed`, `Cancelled`
 
 ---
 
-### 27. DELETE /api/prescriptions/:id/medicines/:medicineId
-**Why:** Remove a medicine from prescription.
-**Where:** Medicine card → delete icon → confirm.
+### 32. DELETE /api/prescriptions/:id/medicines/:medicineId
 **Who:** Doctor (own only), Admin.
 
 **Success — 200:**
@@ -875,9 +969,8 @@ Valid values: `Pending`, `Confirmed`, `Completed`, `Cancelled`
 
 ---
 
-### 28. POST /api/prescriptions/:id/lab-tests
-**Why:** Add a lab test to an existing prescription.
-**Where:** Prescription detail → "Add Lab Test" button → form → save.
+### 33. POST /api/prescriptions/:id/lab-tests
+**Why:** Add a lab test to a prescription.
 **Who:** Doctor (own only), Admin.
 
 **Request:**
@@ -890,18 +983,12 @@ Valid values: `Pending`, `Confirmed`, `Completed`, `Cancelled`
 
 **Success — 201:**
 ```json
-{
-    "status": true,
-    "status_code": 201,
-    "message": "Lab test added",
-    "data": { "id": 1 }
-}
+{ "status": true, "status_code": 201, "message": "Lab test added", "data": { "id": 1 } }
 ```
 
 ---
 
-### 29. DELETE /api/prescriptions/:id/lab-tests/:labTestId
-**Why:** Remove a lab test from prescription.
+### 34. DELETE /api/prescriptions/:id/lab-tests/:labTestId
 **Who:** Doctor (own only), Admin.
 
 **Success — 200:**
@@ -911,13 +998,13 @@ Valid values: `Pending`, `Confirmed`, `Completed`, `Cancelled`
 
 ---
 
-## TEMPLATE ENDPOINTS
+## TEMPLATE ENDPOINTS (5)
 
 ---
 
-### 30. POST /api/templates
-**Why:** Doctor saves a reusable prescription or certificate template.
-**Where:** Templates screen → "Create Template" → form (type, title, content JSON) → save.
+### 35. POST /api/templates
+**Why:** Doctor saves a reusable template.
+**Where:** Templates screen → "Create Template" → form → save.
 **Who:** Doctor, Admin only. Staff blocked.
 
 **Request:**
@@ -925,28 +1012,23 @@ Valid values: `Pending`, `Confirmed`, `Completed`, `Cancelled`
 {
     "type": "Prescription",
     "title": "Common Fever Template",
-    "content": "{\"diagnosis\":\"Viral fever\",\"medicines\":[{\"name\":\"Paracetamol\",\"dosage\":\"500mg\",\"frequency\":\"Twice a day\",\"duration\":\"5 days\"},{\"name\":\"Cetirizine\",\"dosage\":\"10mg\",\"frequency\":\"Once a day\",\"duration\":\"3 days\"}]}"
+    "content": "{\"diagnosis\":\"Viral fever\",\"medicines\":[{\"name\":\"Paracetamol\",\"dosage\":\"500mg\"}]}"
 }
 ```
 Valid types: `Prescription`, `Certificate`, `General`
 
 **Success — 201:**
 ```json
-{
-    "status": true,
-    "status_code": 201,
-    "message": "Template created",
-    "data": { "id": 1 }
-}
+{ "status": true, "status_code": 201, "message": "Template created", "data": { "id": 1 } }
 ```
 
-**Frontend action:** On "New Prescription" form → show "Load Template" button → opens template list → user picks one → form auto-fills from template's JSON content.
+**Frontend action:** On "New Prescription" form → "Load Template" button → picks template → form auto-fills.
 
 ---
 
-### 31. GET /api/templates
+### 36. GET /api/templates
 **Why:** Get all templates from all doctors (shared read).
-**Where:** Templates screen → list. Also shown as dropdown when creating new prescription.
+**Where:** Templates screen. Also dropdown when creating prescription.
 **Who:** Doctor, Admin only. Staff blocked.
 
 **Success — 200:**
@@ -970,18 +1052,16 @@ Valid types: `Prescription`, `Certificate`, `General`
 }
 ```
 
-**Frontend action:** Show template cards. Show edit/delete buttons ONLY if `created_by === loggedInUser.id`.
+**Frontend action:** Show edit/delete buttons ONLY if `created_by === loggedInUser.id`.
 
 ---
 
-### 32. GET /api/templates/:id
-**Why:** Get single template detail.
+### 37. GET /api/templates/:id
 **Who:** Doctor, Admin.
 
 ---
 
-### 33. PUT /api/templates/:id
-**Why:** Update own template.
+### 38. PUT /api/templates/:id
 **Who:** Doctor (own only), Admin. Ownership checked.
 
 **Success — 200:**
@@ -991,8 +1071,7 @@ Valid types: `Prescription`, `Certificate`, `General`
 
 ---
 
-### 34. DELETE /api/templates/:id
-**Why:** Soft delete own template.
+### 39. DELETE /api/templates/:id
 **Who:** Doctor (own only), Admin. Ownership checked.
 
 **Success — 200:**
@@ -1002,24 +1081,28 @@ Valid types: `Prescription`, `Certificate`, `General`
 
 ---
 
-## RECORD & UPLOAD ENDPOINTS
+## RECORD & UPLOAD ENDPOINTS (6)
 
 ---
 
-### 35. POST /api/records
-**Why:** Upload a document/file attached to a patient.
-**Where:** Patient profile → "Records" → "Upload" button → pick file type, title, select file → upload.
-**Who:** Staff, Doctor, Admin. Staff CANNOT upload type "Prescription" or "Certificate".
+### 40. POST /api/records
+**Why:** Upload a file attached to a patient.
+**Where:** Patient profile → Records → "Upload" → pick type, title, file → upload.
+**Who:** Staff, Doctor, Admin.
+
+**IMPORTANT — Role-based file types:**
+- **Doctor dropdown:** `Prescription`, `Certificate`
+- **Staff dropdown:** `Lab Report`, `X-Ray`, `MRI`, `CT Scan`, `Invoice`, `Insurance Document`, `Consent Form`, `General Medical Record`
+- **Admin dropdown:** all 10 types
 
 **Request (form-data, NOT JSON):**
 ```
-Key: patient_id     | Value: 1                    | Type: Text
-Key: file_type      | Value: Lab Report           | Type: Text
-Key: title          | Value: CBC Blood Test        | Type: Text
-Key: notes          | Value: Post fever test       | Type: Text
-Key: file           | Value: [select file]         | Type: File
+Key: patient_id     | Value: 1            | Type: Text
+Key: file_type      | Value: Lab Report   | Type: Text
+Key: title          | Value: CBC Test     | Type: Text
+Key: notes          | Value: Post fever   | Type: Text
+Key: file           | Value: [select file] | Type: File
 ```
-Valid file_type values: `Prescription`, `Lab Report`, `X-Ray`, `MRI`, `CT Scan`, `Invoice`, `Certificate`, `Insurance Document`, `Consent Form`, `General Medical Record`
 
 **Success — 201:**
 ```json
@@ -1027,23 +1110,56 @@ Valid file_type values: `Prescription`, `Lab Report`, `X-Ray`, `MRI`, `CT Scan`,
     "status": true,
     "status_code": 201,
     "message": "Record created",
-    "data": {
-        "id": 1,
-        "file_url": "/uploads/1716206253-339733008.pdf"
-    }
+    "data": { "id": 1, "file_url": "/uploads/1716206253-339733008.pdf" }
 }
 ```
 
-**Frontend action:**
-- file_type → show as dropdown (not free text input)
-- After upload → show toast → refresh records list
-- Use `file_url` to display/download the file: `${BASE_URL}${file_url}`
+**Errors:**
+```json
+{ "status": false, "status_code": 403, "message": "Staff cannot upload this record type", "data": null }
+{ "status": false, "status_code": 403, "message": "Doctor cannot upload this record type", "data": null }
+```
 
 ---
 
-### 36. GET /api/records/:id
-**Why:** Get single record detail with file URL.
-**Where:** Tap on a record card → detail/preview.
+### 41. GET /api/records
+**Why:** Get all records for a patient.
+**Where:** Patient profile → Records tab.
+**Who:** Staff, Doctor, Admin.
+
+**Variants:**
+```
+GET /api/records?patient_id=1    → PT0001's records
+```
+
+**Success — 200:**
+```json
+{
+    "status": true,
+    "status_code": 200,
+    "message": "Records fetched",
+    "data": [
+        {
+            "id": 1,
+            "file_url": "/uploads/1716206253.pdf",
+            "file_name": "CBC_report.pdf",
+            "file_size": 245,
+            "file_type": "Lab Report",
+            "title": "CBC Blood Test",
+            "notes": "Post fever test",
+            "created_at": "2026-05-22T14:00:00.000Z",
+            "uploaded_by_name": "Rahul Kumar"
+        }
+    ]
+}
+```
+
+**Frontend action:** Display file → `${BASE_URL}${file_url}`. `file_size` is in KB.
+
+---
+
+### 42. GET /api/records/:id
+**Why:** Get single record detail.
 **Who:** Staff, Doctor, Admin.
 
 **Success — 200:**
@@ -1054,7 +1170,7 @@ Valid file_type values: `Prescription`, `Lab Report`, `X-Ray`, `MRI`, `CT Scan`,
     "message": "Record fetched",
     "data": {
         "id": 1,
-        "file_url": "/uploads/1716206253-339733008.pdf",
+        "file_url": "/uploads/1716206253.pdf",
         "file_name": "CBC_report.pdf",
         "file_size": 245,
         "file_type": "Lab Report",
@@ -1068,25 +1184,23 @@ Valid file_type values: `Prescription`, `Lab Report`, `X-Ray`, `MRI`, `CT Scan`,
 }
 ```
 
-**Frontend action:** Show file preview (PDF viewer or image). Show download button. `file_size` is in KB.
+---
+
+### 43. DELETE /api/records/:id
+**Who:** Staff, Admin only. Doctor cannot delete records.
+
+**Success — 200:**
+```json
+{ "status": true, "status_code": 200, "message": "Record deleted" }
+```
 
 ---
 
-### 37. DELETE /api/records/:id
-**Why:** Soft delete a record.
-**Who:** Staff, Admin only.
-
----
-
-### 38. POST /api/records/upload/single
-**Why:** Upload a single file without attaching to a patient record.
-**Where:** Used internally or for temporary uploads.
+### 44. POST /api/records/upload/single
+**Why:** Upload a single file (without patient record attachment).
 **Who:** Staff, Doctor, Admin.
 
-**Request (form-data):**
-```
-Key: file | Value: [select file] | Type: File
-```
+**Request (form-data):** `Key: file | Type: File`
 
 **Success — 200:**
 ```json
@@ -1094,25 +1208,17 @@ Key: file | Value: [select file] | Type: File
     "status": true,
     "status_code": 200,
     "message": "File uploaded",
-    "data": {
-        "file_url": "/uploads/1716206253-339733008.png",
-        "file_name": "xray_image.png",
-        "file_size": 1024
-    }
+    "data": { "file_url": "/uploads/file.png", "file_name": "xray.png", "file_size": 1024 }
 }
 ```
 
 ---
 
-### 39. POST /api/records/upload/multiple
+### 45. POST /api/records/upload/multiple
 **Why:** Upload multiple files at once.
-**Where:** Bulk upload screen.
 **Who:** Staff, Doctor, Admin.
 
-**Request (form-data):**
-```
-Key: files | Value: [select multiple files] | Type: File
-```
+**Request (form-data):** `Key: files | Type: File (multiple)`
 
 **Success — 200:**
 ```json
@@ -1121,7 +1227,7 @@ Key: files | Value: [select multiple files] | Type: File
     "status_code": 200,
     "message": "Files uploaded",
     "data": [
-        { "file_url": "/uploads/file1.pdf", "file_name": "report1.pdf", "file_size": 512 },
+        { "file_url": "/uploads/file1.pdf", "file_name": "report.pdf", "file_size": 512 },
         { "file_url": "/uploads/file2.png", "file_name": "xray.png", "file_size": 1024 }
     ]
 }
@@ -1129,13 +1235,13 @@ Key: files | Value: [select multiple files] | Type: File
 
 ---
 
-## REMINDER ENDPOINTS
+## REMINDER ENDPOINTS (4)
 
 ---
 
-### 40. POST /api/reminders
+### 46. POST /api/reminders
 **Why:** Staff creates a follow-up reminder for a patient.
-**Where:** Reminders screen → "+" button → form (patient, title, description, date/time) → save.
+**Where:** Reminders screen → "+" button → form → save.
 **Who:** Staff, Admin only. Doctor blocked.
 
 **Request:**
@@ -1150,20 +1256,21 @@ Key: files | Value: [select multiple files] | Type: File
 
 **Success — 201:**
 ```json
-{
-    "status": true,
-    "status_code": 201,
-    "message": "Reminder created",
-    "data": { "id": 1 }
-}
+{ "status": true, "status_code": 201, "message": "Reminder created", "data": { "id": 1 } }
 ```
 
 ---
 
-### 41. GET /api/reminders
-**Why:** Get all reminders sorted by due date.
-**Where:** Reminders screen → loads on open.
+### 47. GET /api/reminders
+**Why:** Get reminders. Supports optional patient filter.
+**Where:** Reminders screen. Also patient profile → Reminders tab.
 **Who:** Staff, Admin only.
+
+**Variants:**
+```
+GET /api/reminders                    → all reminders
+GET /api/reminders?patient_id=1       → only PT0001's reminders
+```
 
 **Success — 200:**
 ```json
@@ -1187,16 +1294,15 @@ Key: files | Value: [select multiple files] | Type: File
 }
 ```
 
-**Frontend action:** Show reminders list. Pending reminders first. Show checkbox to mark done. Overdue reminders (remind_at < now && !is_done) → highlight in red.
+**Frontend action:** Overdue (remind_at < now && !is_done) → highlight red.
 
 ---
 
-### 42. PUT /api/reminders/:id
+### 48. PUT /api/reminders/:id
 **Why:** Update reminder or mark as done.
-**Where:** Reminder card → edit or "Mark Done" checkbox.
 **Who:** Staff, Admin only.
 
-**Request (mark as done):**
+**Request:**
 ```json
 {
     "title": "Post fever follow-up call",
@@ -1213,19 +1319,23 @@ Key: files | Value: [select multiple files] | Type: File
 
 ---
 
-### 43. DELETE /api/reminders/:id
-**Why:** Soft delete a reminder.
+### 49. DELETE /api/reminders/:id
 **Who:** Staff, Admin only.
 
+**Success — 200:**
+```json
+{ "status": true, "status_code": 200, "message": "Reminder deleted" }
+```
+
 ---
 
-## INVOICE ENDPOINTS
+## INVOICE ENDPOINTS (4)
 
 ---
 
-### 44. POST /api/invoices
-**Why:** Staff creates a bill for a patient's visit.
-**Where:** Patient profile → "Create Invoice" button → form (amount, description, notes) → save.
+### 50. POST /api/invoices
+**Why:** Staff creates a bill for a patient.
+**Where:** Patient profile → "Create Invoice" → form → save.
 **Who:** Staff, Admin only. Doctor blocked.
 
 **Request:**
@@ -1240,22 +1350,21 @@ Key: files | Value: [select multiple files] | Type: File
 
 **Success — 201:**
 ```json
-{
-    "status": true,
-    "status_code": 201,
-    "message": "Invoice created",
-    "data": { "id": 1 }
-}
+{ "status": true, "status_code": 201, "message": "Invoice created", "data": { "id": 1 } }
 ```
-
-**Frontend action:** Show toast → navigate to invoice detail → show "Download PDF" button (Phase 2).
 
 ---
 
-### 45. GET /api/invoices
-**Why:** Get all invoices.
-**Where:** Invoices screen → loads on open.
+### 51. GET /api/invoices
+**Why:** Get invoices. Supports optional patient filter.
+**Where:** Invoices screen. Also patient profile → Invoices tab.
 **Who:** Staff, Admin only.
+
+**Variants:**
+```
+GET /api/invoices                    → all invoices
+GET /api/invoices?patient_id=1       → only PT0001's invoices
+```
 
 **Success — 200:**
 ```json
@@ -1278,32 +1387,25 @@ Key: files | Value: [select multiple files] | Type: File
 }
 ```
 
-**Frontend action:** Show invoice cards. Status badge colors:
-- Unpaid → red
-- Paid → green
-- Cancelled → gray
+**Frontend action:** Status badges: Unpaid=red, Paid=green, Cancelled=gray.
 
 ---
 
-### 46. GET /api/invoices/:id
-**Why:** Get single invoice detail.
-**Where:** Tap invoice card → detail screen.
+### 52. GET /api/invoices/:id
 **Who:** Staff, Admin.
 
 ---
 
-### 47. PATCH /api/invoices/:id/status
-**Why:** Update payment status only.
-**Where:** Invoice detail → "Mark as Paid" button or status dropdown.
+### 53. PATCH /api/invoices/:id/status
+**Why:** Update payment status.
+**Where:** Invoice detail → "Mark as Paid" button.
 **Who:** Staff, Admin.
 
 **Request:**
 ```json
-{
-    "status": "Paid"
-}
+{ "status": "Paid" }
 ```
-Valid values: `Unpaid`, `Paid`, `Cancelled`
+Valid: `Unpaid`, `Paid`, `Cancelled`
 
 **Success — 200:**
 ```json
@@ -1312,43 +1414,43 @@ Valid values: `Unpaid`, `Paid`, `Cancelled`
 
 ---
 
-## CERTIFICATE ENDPOINTS
+## CERTIFICATE ENDPOINTS (5)
 
 ---
 
-### 48. POST /api/certificates
-**Why:** Doctor creates a medical certificate for a patient.
-**Where:** Patient profile → "New Certificate" → form (title, content, valid_until) → save.
-**Who:** Doctor, Admin only. Staff blocked from creating.
+### 54. POST /api/certificates
+**Why:** Doctor creates a medical certificate.
+**Where:** Patient profile → "New Certificate" → form → save.
+**Who:** Doctor, Admin only.
 
 **Request:**
 ```json
 {
     "patient_id": 1,
     "title": "Sick Leave Certificate",
-    "content": "This is to certify that Rajesh Verma was examined on 20th May 2026 and is advised rest for 5 days due to viral fever.",
+    "content": "This is to certify that Rajesh Verma was examined on 20th May 2026 and is advised rest for 5 days.",
     "valid_until": "2026-05-25"
 }
 ```
 
 **Success — 201:**
 ```json
-{
-    "status": true,
-    "status_code": 201,
-    "message": "Certificate created",
-    "data": { "id": 1 }
-}
+{ "status": true, "status_code": 201, "message": "Certificate created", "data": { "id": 1 } }
 ```
-
-**Frontend action:** Show toast → show certificate preview → "Download PDF" button (Phase 2).
 
 ---
 
-### 49. GET /api/certificates
-**Why:** Get all certificates.
-**Where:** Certificates screen → loads on open.
+### 55. GET /api/certificates
+**Why:** Get certificates. Supports optional filters.
+**Where:** Certificates screen. Also patient profile → Certificates tab.
 **Who:** Doctor (own only), Staff (read all), Admin (read all).
+
+**Variants:**
+```
+GET /api/certificates                    → all (Staff/Admin) or own (Doctor)
+GET /api/certificates?patient_id=1       → only PT0001's certificates
+GET /api/certificates?doctor_id=2        → only DR0001's certificates
+```
 
 **Success — 200:**
 ```json
@@ -1372,35 +1474,32 @@ Valid values: `Unpaid`, `Paid`, `Cancelled`
 }
 ```
 
-**Frontend action:** Show certificate cards. Staff sees all. Doctor sees only where `doctor_id === loggedInUser.id`. Only doctor sees edit/delete buttons on own certificates.
+**Frontend action:** Staff sees all. Doctor sees own only. Edit/delete buttons only if `doctor_id === loggedInUser.id`.
 
 ---
 
-### 50. GET /api/certificates/:id
-**Why:** Get single certificate full content.
+### 56. GET /api/certificates/:id
 **Who:** Doctor (own only), Staff (read), Admin.
 
 ---
 
-### 51. PUT /api/certificates/:id
-**Why:** Update own certificate.
+### 57. PUT /api/certificates/:id
 **Who:** Doctor (own only), Admin. Ownership checked.
 
 ---
 
-### 52. DELETE /api/certificates/:id
-**Why:** Soft delete own certificate.
+### 58. DELETE /api/certificates/:id
 **Who:** Doctor (own only), Admin. Ownership checked.
 
 ---
 
-## NOTIFICATION ENDPOINTS
+## NOTIFICATION ENDPOINTS (3)
 
 ---
 
-### 53. GET /api/notifications
-**Why:** Get all notifications for the logged-in user + unread count.
-**Where:** Bell icon tap → notification panel/screen.
+### 59. GET /api/notifications
+**Why:** Get all notifications for logged-in user + unread count.
+**Where:** Bell icon → notification panel.
 **Who:** Any logged-in user. Each user sees only their own.
 
 **Success — 200:**
@@ -1419,32 +1518,18 @@ Valid values: `Unpaid`, `Paid`, `Cancelled`
                 "type": "Appointment",
                 "is_read": false,
                 "created_at": "2026-05-20T15:00:00.000Z"
-            },
-            {
-                "id": 2,
-                "title": "Reminder Due",
-                "message": "Follow up with PT0005 - Rajesh Verma",
-                "type": "Reminder",
-                "is_read": false,
-                "created_at": "2026-05-25T10:00:00.000Z"
             }
         ]
     }
 }
 ```
 
-**Frontend action:**
-- `unread_count` → show as red badge on bell icon
-- Unread notifications → bold/highlighted
-- Read notifications → normal style
-- Tap notification → mark as read + navigate to relevant screen based on `type`
+**Frontend action:** `unread_count` → red badge on bell icon. Tap → mark as read + navigate based on `type`.
 
 ---
 
-### 54. PATCH /api/notifications/:id/read
-**Why:** Mark a notification as read.
-**Where:** Tap on notification → auto-call this. Or "Mark all as read" button.
-**Who:** Any logged-in user (own notifications only).
+### 60. PATCH /api/notifications/:id/read
+**Who:** Any logged-in user (own only).
 
 **Success — 200:**
 ```json
@@ -1453,9 +1538,7 @@ Valid values: `Unpaid`, `Paid`, `Cancelled`
 
 ---
 
-### 55. DELETE /api/notifications/:id
-**Why:** Delete a notification.
-**Where:** Swipe left on notification → delete. Or "..." menu → delete.
+### 61. DELETE /api/notifications/:id
 **Who:** Any logged-in user (own only).
 
 **Success — 200:**
@@ -1465,13 +1548,13 @@ Valid values: `Unpaid`, `Paid`, `Cancelled`
 
 ---
 
-## SEARCH ENDPOINTS
+## SEARCH ENDPOINTS (5)
 
 ---
 
-### 56. GET /api/search/global?q=
-**Why:** Search across everything — patients, prescriptions, invoices, records.
-**Where:** Top-level search bar in app header.
+### 62. GET /api/search/global?q=
+**Why:** Search across patients, prescriptions, invoices, records.
+**Where:** Top-level search bar.
 **Who:** Any logged-in user.
 
 **Example:** `GET /api/search/global?q=rajesh`
@@ -1484,38 +1567,37 @@ Valid values: `Unpaid`, `Paid`, `Cancelled`
     "message": "Search results",
     "data": [
         { "category": "patient", "id": 1, "label": "Rajesh Verma", "detail": "PT0001" },
-        { "category": "prescription", "id": 1, "label": "Viral fever", "detail": "Rest 5 days" },
-        { "category": "invoice", "id": 1, "label": "1500.00", "detail": "Paid" }
+        { "category": "prescription", "id": 1, "label": "Viral fever", "detail": "Rest 5 days" }
     ]
 }
 ```
 
-**Frontend action:** Group results by `category`. Show section headers (Patients, Prescriptions, Invoices, Records). Tap any result → navigate to that item's detail screen.
+**Frontend action:** Group by `category`. Tap → navigate to detail.
 
 ---
 
-### 57. GET /api/search/patients?q=
-**Where:** Patient list screen search bar.
+### 63. GET /api/search/patients?q=
+**Where:** Patient list search bar.
 
-### 58. GET /api/search/prescriptions?q=
-**Where:** Prescriptions screen search bar. Staff blocked.
+### 64. GET /api/search/prescriptions?q=
+**Where:** Prescriptions search bar.
 
-### 59. GET /api/search/invoices?q=
-**Where:** Invoices screen search bar. Doctor blocked.
+### 65. GET /api/search/invoices?q=
+**Where:** Invoices search bar. Doctor blocked.
 
-### 60. GET /api/search/records?q=
-**Where:** Records screen search bar.
-
----
-
-## DASHBOARD ENDPOINT
+### 66. GET /api/search/records?q=
+**Where:** Records search bar.
 
 ---
 
-### 61. GET /api/dashboard
-**Why:** Get summary stats and today's appointments.
-**Where:** Home/Dashboard screen → loads on app open.
-**Who:** Admin sees all. Doctor sees own appointments only. Staff sees all.
+## DASHBOARD ENDPOINT (1)
+
+---
+
+### 67. GET /api/dashboard
+**Why:** Summary stats and today's appointments.
+**Where:** Home screen → loads on app open.
+**Who:** Admin sees all. Doctor sees own appointments. Staff sees all.
 
 **Success — 200:**
 ```json
@@ -1549,50 +1631,63 @@ Valid values: `Unpaid`, `Paid`, `Cancelled`
 }
 ```
 
-**Frontend action:**
-- `stats` → render 4 metric cards (patients, today's appointments, pending, revenue)
-- `today_appointments` → render appointment cards below stats
-- Tap appointment → navigate to appointment detail
-- `total_revenue` → format as ₹45,000 (use Intl.NumberFormat)
+**Frontend action:** Stats → 4 metric cards. `total_revenue` → format ₹45,000.
+
+---
+
+## PATIENT PROFILE — ALL API CALLS
+
+When user taps a patient card, frontend loads everything:
+
+```javascript
+const patientId = patient.id;
+
+const [patient, prescriptions, certificates, records, invoices, reminders, appointments, timeline] = await Promise.all([
+    axios.get(`/api/patients/${patientId}`),
+    axios.get(`/api/prescriptions?patient_id=${patientId}`),
+    axios.get(`/api/certificates?patient_id=${patientId}`),
+    axios.get(`/api/records?patient_id=${patientId}`),
+    axios.get(`/api/invoices?patient_id=${patientId}`),
+    axios.get(`/api/reminders?patient_id=${patientId}`),
+    axios.get(`/api/appointments?patient_id=${patientId}`),
+    axios.get(`/api/patients/${patientId}/timeline`),
+]);
+```
 
 ---
 
 ## ROLE-BASED UI RENDERING
 
-Use `user.role` from login response to show/hide menu items and buttons:
+```javascript
+// After login, use user.role everywhere:
 
-```
-DOCTOR sees:
-- Dashboard (own data)
-- Patients (create + read)
-- Appointments (own only)
-- Prescriptions (own CRUD)
-- Certificates (own CRUD)
-- Templates (read all, CRUD own)
-- Records (read only)
-- Notifications
-- Profile Settings
+// Menu items
+const showReminders  = ['Staff', 'Admin'].includes(user.role);
+const showInvoices   = ['Staff', 'Admin'].includes(user.role);
+const showTemplates  = ['Doctor', 'Admin'].includes(user.role);
 
-STAFF sees:
-- Dashboard (all data)
-- Patients (full CRUD)
-- Appointments (full CRUD)
-- Prescriptions (read only)
-- Certificates (read only)
-- Records (upload + read + delete)
-- Invoices (full CRUD)
-- Reminders (full CRUD)
-- Notifications
-- Profile Settings
+// Buttons inside patient profile
+const canEditPatient        = ['Staff', 'Admin'].includes(user.role);
+const canCreatePrescription = ['Doctor', 'Admin'].includes(user.role);
+const canCreateCertificate  = ['Doctor', 'Admin'].includes(user.role);
+const canCreateInvoice      = ['Staff', 'Admin'].includes(user.role);
+const canCreateReminder     = ['Staff', 'Admin'].includes(user.role);
+const canDeleteRecord       = ['Staff', 'Admin'].includes(user.role);
 
-ADMIN sees:
-- Everything
-- User management (approve/reject)
+// Ownership check for edit/delete
+const canEditPrescription = user.role === 'Doctor' && prescription.doctor_id === user.id;
+const canEditTemplate     = template.created_by === user.id;
+const canEditCertificate  = user.role === 'Doctor' && certificate.doctor_id === user.id;
+
+// Record upload types
+const DOCTOR_FILE_TYPES = ['Prescription', 'Certificate'];
+const STAFF_FILE_TYPES  = ['Lab Report', 'X-Ray', 'MRI', 'CT Scan', 'Invoice', 'Insurance Document', 'Consent Form', 'General Medical Record'];
+const fileTypes = user.role === 'Doctor' ? DOCTOR_FILE_TYPES : user.role === 'Staff' ? STAFF_FILE_TYPES : [...DOCTOR_FILE_TYPES, ...STAFF_FILE_TYPES];
 ```
 
 ---
 
-## COMMON ERROR CODES REFERENCE
+## COMMON ERROR CODES
 
 | Code | Meaning | Frontend Action |
 |------|---------|----------------|
@@ -1604,3 +1699,24 @@ ADMIN sees:
 | 404 | Not found | Show error modal with message |
 | 409 | Conflict (duplicate) | Show error modal with message |
 | 500 | Server error | Show error modal "Something went wrong" |
+
+---
+
+## ENDPOINT SUMMARY
+
+| Module | Endpoints | Numbers |
+|--------|-----------|---------|
+| Auth | 7 | #1 — #7 |
+| Doctor Profile | 4 | #8 — #11 |
+| Patient | 7 | #12 — #18 |
+| Appointment | 6 | #19 — #24 |
+| Prescription | 10 | #25 — #34 |
+| Template | 5 | #35 — #39 |
+| Record & Upload | 6 | #40 — #45 |
+| Reminder | 4 | #46 — #49 |
+| Invoice | 4 | #50 — #53 |
+| Certificate | 5 | #54 — #58 |
+| Notification | 3 | #59 — #61 |
+| Search | 5 | #62 — #66 |
+| Dashboard | 1 | #67 |
+| **Total** | **67** | |

@@ -18,6 +18,7 @@ const certificateRoutes = require('./routes/certificate.routes');
 const notificationRoutes = require('./routes/notification.routes');
 const searchRoutes = require('./routes/search.routes');
 const dashboardRoutes = require('./routes/dashboard.routes');
+const doctorRoutes = require('./routes/doctor.routes');
 
 const app = express();
 
@@ -42,7 +43,7 @@ app.use('/api/certificates', certificateRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/dashboard', dashboardRoutes);
-
+app.use('/api/doctors', doctorRoutes);
 // Health check
 app.get('/', (req, res) => {
     res.json({ message: 'Medical API is running' });

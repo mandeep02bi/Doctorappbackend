@@ -20,8 +20,9 @@ const createCertificate = asyncHandler(async (req, res) => {
     return success(res, 201, 'Certificate created', { id: result.insertId });
 });
 
-// GET /api/certificates
 const getAllCertificates = asyncHandler(async (req, res) => {
+    const { patient_id } = req.query;
+
     let query = `
         SELECT c.id, c.title, c.valid_until, c.created_at,
                CONCAT(p.first_name, ' ', p.last_name) AS patient_name, p.patient_code,
@@ -34,7 +35,13 @@ const getAllCertificates = asyncHandler(async (req, res) => {
 
     const params = [];
 
-    // Doctor can only see own certificates (Staff and Admin see all)
+    // Filter by patient if provided
+    if (patient_id) {
+        query += ' AND c.patient_id = ?';
+        params.push(patient_id);
+    }
+
+    // Doctor sees only own
     if (req.user.role === 'Doctor') {
         query += ' AND c.doctor_id = ?';
         params.push(req.user.id);

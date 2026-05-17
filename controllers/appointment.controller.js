@@ -27,8 +27,9 @@ const createAppointment = asyncHandler(async (req, res) => {
     return success(res, 201, 'Appointment created', { id: result.insertId });
 });
 
-// GET /api/appointments
 const getAllAppointments = asyncHandler(async (req, res) => {
+    const { patient_id } = req.query;
+
     let query = `
         SELECT a.id, a.appointment_date, a.reason, a.status, a.created_at,
                CONCAT(p.first_name, ' ', p.last_name) AS patient_name, p.patient_code,
@@ -40,7 +41,13 @@ const getAllAppointments = asyncHandler(async (req, res) => {
 
     const params = [];
 
-    // Doctor can only see their own appointments
+    // Filter by patient if provided
+    if (patient_id) {
+        query += ' AND a.patient_id = ?';
+        params.push(patient_id);
+    }
+
+    // Doctor sees only own appointments
     if (req.user.role === 'Doctor') {
         query += ' AND a.doctor_id = ?';
         params.push(req.user.id);
