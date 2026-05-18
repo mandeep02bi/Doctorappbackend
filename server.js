@@ -19,6 +19,7 @@ const notificationRoutes = require('./routes/notification.routes');
 const searchRoutes = require('./routes/search.routes');
 const dashboardRoutes = require('./routes/dashboard.routes');
 const doctorRoutes = require('./routes/doctor.routes');
+const initDB = require('./config/db.init');
 
 const app = express();
 
@@ -53,6 +54,8 @@ app.get('/', (req, res) => {
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+initDB().then(() => {
+    app.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
+    });
 });
