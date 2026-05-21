@@ -2,16 +2,9 @@ const pool = require('../config/db');
 const asyncHandler = require('../middlewares/asyncHandler');
 const { success, error } = require('../utils/response');
 
-// Helper: get doctor id (auto-assign single doctor)
-const getDoctorId = async (userId) => {
-    const [doctors] = await pool.query('SELECT id FROM users WHERE role = "Doctor" AND isDeleted = false AND isVerified = true LIMIT 1');
-    if (doctors.length === 0) return userId; // fallback to current user
-    return doctors[0].id;
-};
-
 // #17 POST /api/appointments
 const createAppointment = asyncHandler(async (req, res) => {
-    const { patient_code, patient_name, patient_gender, patient_age, patient_age_unit, patient_dob, patient_whatsapp, patient_email, appointment_date, appointment_time, purpose, notes } = req.body;
+    const { patient_code, doctor_code, patient_name, patient_gender, patient_age, patient_age_unit, patient_dob, patient_whatsapp, patient_email, appointment_date, appointment_time, purpose, notes } = req.body;
 
     if (!appointment_date || !appointment_time) {
         return error(res, 400, 'Appointment date and time are required');
@@ -20,7 +13,7 @@ const createAppointment = asyncHandler(async (req, res) => {
     let patientId = null;
     let pName = patient_name;
 
-    // Way 1: existing patient
+    // Way 1: existing patient (from dropdown)
     if (patient_code) {
         const [patient] = await pool.query('SELECT id, first_name, middle_name, last_name FROM patients WHERE patient_code = ? AND isDeleted = false', [patient_code]);
         if (patient.length === 0) return error(res, 404, 'Patient not found');
@@ -31,7 +24,17 @@ const createAppointment = asyncHandler(async (req, res) => {
         if (!patient_name) return error(res, 400, 'Patient name is required for walk-in');
     }
 
-    const doctorId = await getDoctorId(req.user.id);
+    // Doctor from dropdown
+    let doctorId;
+    if (doctor_code) {
+        const [doctor] = await pool.query("SELECT id FROM users WHERE user_code = ? AND role = 'Doctor' AND isVerified = true AND isDeleted = false", [doctor_code]);
+        if (doctor.length === 0) return error(res, 404, 'Doctor not found');
+        doctorId = doctor[0].id;
+    } else if (req.user.role === 'Doctor') {
+        doctorId = req.user.id;
+    } else {
+        return error(res, 400, 'Doctor is required');
+    }
 
     const [result] = await pool.query(
         `INSERT INTO appointments (patient_id, doctor_id, booked_by, patient_name, patient_gender, patient_age, patient_age_unit, patient_dob, patient_whatsapp, patient_email, appointment_date, appointment_time, purpose, notes)

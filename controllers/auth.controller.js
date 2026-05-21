@@ -162,54 +162,13 @@ const logout = asyncHandler(async (req, res) => {
     return success(res, 200, 'Logged out successfully');
 });
 
-// #8 GET /api/auth/pending
-const pending = asyncHandler(async (req, res) => {
-    const [users] = await pool.query(
-        'SELECT user_code, first_name, last_name, email, phone, role, created_at FROM users WHERE isVerified = false AND isDeleted = false AND role != ?',
-        ['Admin']
+// GET /api/auth/doctors
+const getDoctors = asyncHandler(async (req, res) => {
+    const [rows] = await pool.query(
+        "SELECT user_code, first_name, last_name, email, phone FROM users WHERE role = 'Doctor' AND isVerified = true AND isDeleted = false ORDER BY first_name ASC"
     );
-
-    return success(res, 200, 'Pending users fetched', users);
+    return success(res, 200, 'Doctors fetched', rows);
 });
 
-// #9 PATCH /api/auth/approve/:user_code
-const approve = asyncHandler(async (req, res) => {
-    const { user_code } = req.params;
 
-    const [users] = await pool.query('SELECT id, role, isVerified FROM users WHERE user_code = ? AND isDeleted = false', [user_code]);
-    if (users.length === 0) {
-        return error(res, 404, 'User not found');
-    }
-
-    if (users[0].role === 'Admin') {
-        return error(res, 400, 'Cannot approve admin');
-    }
-
-    if (users[0].isVerified) {
-        return error(res, 400, 'User is already verified');
-    }
-
-    await pool.query('UPDATE users SET isVerified = true WHERE user_code = ?', [user_code]);
-
-    return success(res, 200, 'User approved successfully');
-});
-
-// #10 PATCH /api/auth/reject/:user_code
-const reject = asyncHandler(async (req, res) => {
-    const { user_code } = req.params;
-
-    const [users] = await pool.query('SELECT id, role FROM users WHERE user_code = ? AND isDeleted = false', [user_code]);
-    if (users.length === 0) {
-        return error(res, 404, 'User not found');
-    }
-
-    if (users[0].role === 'Admin') {
-        return error(res, 400, 'Cannot reject admin');
-    }
-
-    await pool.query('UPDATE users SET isDeleted = true WHERE user_code = ?', [user_code]);
-
-    return success(res, 200, 'User rejected and removed');
-});
-
-module.exports = { register, login, forgotPassword, verifyOTP, resetPassword, me, logout, pending, approve, reject };
+module.exports = { register, login, forgotPassword, verifyOTP, resetPassword, me, logout ,getDoctors};

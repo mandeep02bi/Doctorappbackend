@@ -10,9 +10,10 @@ const initDB = async () => {
 
         const statements = schema
             .replace(/DELIMITER \/\/[\s\S]*?DELIMITER ;/g, '')
+            .replace(/--.*$/gm, '')
             .split(';')
             .map(s => s.trim())
-            .filter(s => s.length > 0 && !s.startsWith('--'));
+            .filter(s => s.length > 0);
 
         for (const stmt of statements) {
             try {

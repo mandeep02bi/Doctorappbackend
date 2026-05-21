@@ -57,5 +57,161 @@ const resetPdfLimit = asyncHandler(async (req, res) => {
     await pool.query('UPDATE usage_counter SET total_count = 0, reset_at = NOW() WHERE user_id = ?', [user[0].id]);
     return success(res, 200, 'PDF limit reset successfully');
 });
+// #74 GET /api/admin/users/:user_code
+const getUser = asyncHandler(async (req, res) => {
+    const { user_code } = req.params;
 
-module.exports = { adminDashboard, getAllUsers, resetPdfLimit };
+    const [users] = await pool.query(
+        "SELECT user_code, first_name, last_name, email, phone, role, isVerified, platform, device_type, last_login_at, created_at FROM users WHERE user_code = ? AND isDeleted = false AND role != 'Admin'",
+        [user_code]
+    );
+    if (users.length === 0) return error(res, 404, 'User not found');
+
+    const user = users[0];
+    const userId = (await pool.query('SELECT id FROM users WHERE user_code = ?', [user_code]))[0][0].id;
+
+    const [[{ total_appointments }]] = await pool.query('SELECT COUNT(*) AS total_appointments FROM appointments WHERE doctor_id = ? AND isDeleted = false', [userId]);
+    const [[{ total_prescriptions }]] = await pool.query('SELECT COUNT(*) AS total_prescriptions FROM prescriptions WHERE doctor_id = ? AND isDeleted = false', [userId]);
+    const [[{ total_certificates }]] = await pool.query('SELECT COUNT(*) AS total_certificates FROM certificates WHERE doctor_id = ? AND isDeleted = false', [userId]);
+    const [[{ total_instructions }]] = await pool.query('SELECT COUNT(*) AS total_instructions FROM instructions WHERE doctor_id = ? AND isDeleted = false', [userId]);
+
+    user.stats = { total_appointments, total_prescriptions, total_certificates, total_instructions };
+
+    return success(res, 200, 'User fetched', user);
+});
+
+// #75 GET /api/admin/patients
+const getAdminPatients = asyncHandler(async (req, res) => {
+    const [rows] = await pool.query(`
+        SELECT p.patient_code, p.first_name, p.middle_name, p.last_name, p.phone, p.gender, p.age, p.blood_group, p.city, p.created_at,
+               CONCAT(u.first_name, ' ', u.last_name) AS created_by_name, u.role AS created_by_role,
+               (SELECT COUNT(*) FROM prescriptions WHERE patient_id = p.id AND isDeleted = false) AS total_prescriptions,
+               (SELECT COUNT(*) FROM appointments WHERE patient_id = p.id AND isDeleted = false) AS total_appointments,
+               (SELECT COUNT(*) FROM invoices WHERE patient_id = p.id AND isDeleted = false) AS total_invoices
+        FROM patients p
+        INNER JOIN users u ON u.id = p.created_by
+        WHERE p.isDeleted = false
+        ORDER BY p.created_at DESC
+    `);
+    return success(res, 200, 'Patients fetched', rows);
+});
+
+// #76 GET /api/admin/patients/:patient_code
+const getAdminPatient = asyncHandler(async (req, res) => {
+    const [rows] = await pool.query(`
+        SELECT p.*, CONCAT(u.first_name, ' ', u.last_name) AS created_by_name, u.role AS created_by_role
+        FROM patients p
+        INNER JOIN users u ON u.id = p.created_by
+        WHERE p.patient_code = ? AND p.isDeleted = false`,
+        [req.params.patient_code]
+    );
+    if (rows.length === 0) return error(res, 404, 'Patient not found');
+
+    const patient = rows[0];
+    delete patient.isDeleted;
+    const pid = patient.id;
+
+    const [[{ total_prescriptions }]] = await pool.query('SELECT COUNT(*) AS total_prescriptions FROM prescriptions WHERE patient_id = ? AND isDeleted = false', [pid]);
+    const [[{ total_certificates }]] = await pool.query('SELECT COUNT(*) AS total_certificates FROM certificates WHERE patient_id = ? AND isDeleted = false', [pid]);
+    const [[{ total_instructions }]] = await pool.query('SELECT COUNT(*) AS total_instructions FROM instructions WHERE patient_id = ? AND isDeleted = false', [pid]);
+    const [[{ total_consents }]] = await pool.query('SELECT COUNT(*) AS total_consents FROM consents WHERE patient_id = ? AND isDeleted = false', [pid]);
+    const [[{ total_invoices }]] = await pool.query('SELECT COUNT(*) AS total_invoices FROM invoices WHERE patient_id = ? AND isDeleted = false', [pid]);
+    const [[{ total_appointments }]] = await pool.query('SELECT COUNT(*) AS total_appointments FROM appointments WHERE patient_id = ? AND isDeleted = false', [pid]);
+    const [[{ total_reminders }]] = await pool.query('SELECT COUNT(*) AS total_reminders FROM reminders WHERE patient_id = ? AND isDeleted = false', [pid]);
+    const [[{ unpaid_invoices }]] = await pool.query("SELECT COUNT(*) AS unpaid_invoices FROM invoices WHERE patient_id = ? AND isDeleted = false AND status = 'To pay'", [pid]);
+    const [[{ total_revenue }]] = await pool.query("SELECT COALESCE(SUM(total_amount), 0) AS total_revenue FROM invoices WHERE patient_id = ? AND isDeleted = false AND status = 'Paid'", [pid]);
+
+    patient.stats = { total_prescriptions, total_certificates, total_instructions, total_consents, total_invoices, total_appointments, total_reminders, unpaid_invoices, total_revenue };
+
+    return success(res, 200, 'Patient fetched', patient);
+});
+
+// #78 DELETE /api/admin/users/:user_code
+const deleteUser = asyncHandler(async (req, res) => {
+    const { user_code } = req.params;
+
+    const [users] = await pool.query('SELECT id, role FROM users WHERE user_code = ? AND isDeleted = false', [user_code]);
+    if (users.length === 0) return error(res, 404, 'User not found');
+    if (users[0].role === 'Admin') return error(res, 400, 'Cannot delete admin');
+
+    await pool.query('UPDATE users SET isDeleted = true WHERE user_code = ?', [user_code]);
+    return success(res, 200, 'User deleted');
+});
+// #75 POST /api/admin/create-user (Admin creates user, auto-verified)
+const createUser = asyncHandler(async (req, res) => {
+    const { first_name, last_name, email, phone, password, role } = req.body;
+
+    if (!first_name || !last_name || !email || !password || !role) {
+        return error(res, 400, 'All fields are required');
+    }
+
+    if (!['Doctor', 'Staff'].includes(role)) {
+        return error(res, 400, 'Role must be Doctor or Staff');
+    }
+
+    const [existing] = await pool.query('SELECT id FROM users WHERE email = ?', [email]);
+    if (existing.length > 0) {
+        return error(res, 409, 'Email already registered');
+    }
+
+    const hash = await bcrypt.hash(password, 10);
+    const [result] = await pool.query(
+        'INSERT INTO users (first_name, last_name, email, phone, password, role, isVerified) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [first_name, last_name, email, phone || null, hash, role, true]
+    );
+
+    const [user] = await pool.query('SELECT user_code, first_name, last_name, email, role, isVerified FROM users WHERE id = ?', [result.insertId]);
+
+    return success(res, 201, 'User created and verified', user[0]);
+});
+// #8 GET /api/admin/pending
+const pending = asyncHandler(async (req, res) => {
+    const [users] = await pool.query(
+        'SELECT user_code, first_name, last_name, email, phone, role, created_at FROM users WHERE isVerified = false AND isDeleted = false AND role != ?',
+        ['Admin']
+    );
+
+    return success(res, 200, 'Pending users fetched', users);
+});
+
+// #9 PATCH /api/admin/approve/:user_code
+const approve = asyncHandler(async (req, res) => {
+    const { user_code } = req.params;
+
+    const [users] = await pool.query('SELECT id, role, isVerified FROM users WHERE user_code = ? AND isDeleted = false', [user_code]);
+    if (users.length === 0) {
+        return error(res, 404, 'User not found');
+    }
+
+    if (users[0].role === 'Admin') {
+        return error(res, 400, 'Cannot approve admin');
+    }
+
+    if (users[0].isVerified) {
+        return error(res, 400, 'User is already verified');
+    }
+
+    await pool.query('UPDATE users SET isVerified = true WHERE user_code = ?', [user_code]);
+
+    return success(res, 200, 'User approved successfully');
+});
+
+// #10 PATCH /api/admin/reject/:user_code
+const reject = asyncHandler(async (req, res) => {
+    const { user_code } = req.params;
+
+    const [users] = await pool.query('SELECT id, role FROM users WHERE user_code = ? AND isDeleted = false', [user_code]);
+    if (users.length === 0) {
+        return error(res, 404, 'User not found');
+    }
+
+    if (users[0].role === 'Admin') {
+        return error(res, 400, 'Cannot reject admin');
+    }
+
+    await pool.query('UPDATE users SET isDeleted = true WHERE user_code = ?', [user_code]);
+
+    return success(res, 200, 'User rejected and removed');
+});
+
+module.exports = { adminDashboard, getAllUsers, getUser, getAdminPatients, getAdminPatient, resetPdfLimit, deleteUser,createUser,approve,reject,pending };
