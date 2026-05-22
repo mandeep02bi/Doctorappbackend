@@ -63,15 +63,16 @@ const initDB = async () => {
         }
 
         // Seed admin
-        const [admins] = await pool.query('SELECT id FROM users WHERE role = ? LIMIT 1', ['Admin']);
-        if (admins.length === 0) {
-            const hash = await bcrypt.hash('Admin@1234', 10);
-            await pool.query(
-                'INSERT INTO users (first_name, last_name, email, phone, password, role, isVerified) VALUES (?, ?, ?, ?, ?, ?, ?)',
-                ['Super', 'Admin', 'admin@medical.com', '0000000000', hash, 'Admin', true]
-            );
-            console.log('Admin seeded: admin@medical.com / Admin@1234');
-        }
+       // Seed admin
+const [admins] = await pool.query('SELECT id FROM users WHERE role = ? LIMIT 1', ['Admin']);
+if (admins.length === 0) {
+    const hash = await bcrypt.hash('Admin@2026', 10);
+    await pool.query(
+        'INSERT INTO users (first_name, last_name, email, phone, password, role, isVerified) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        ['Super', 'Admin', 'np6866181@gmail.com', '0000000000', hash, 'Admin', true]
+    );
+    console.log('Admin seeded: np6866181@gmail.com / Admin@2026');
+}
 
         console.log('Database initialized');
     } catch (err) {
