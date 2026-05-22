@@ -21,21 +21,6 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at      TIMESTAMP     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
-DELIMITER //
-CREATE TRIGGER IF NOT EXISTS generate_user_code
-BEFORE INSERT ON users
-FOR EACH ROW
-BEGIN
-    DECLARE next_num INT;
-    IF NEW.role = 'Doctor' THEN
-        SELECT COUNT(*) + 1 INTO next_num FROM users WHERE role = 'Doctor';
-        SET NEW.user_code = CONCAT('DR', LPAD(next_num, 4, '0'));
-    ELSEIF NEW.role = 'Staff' THEN
-        SELECT COUNT(*) + 1 INTO next_num FROM users WHERE role = 'Staff';
-        SET NEW.user_code = CONCAT('ST', LPAD(next_num, 4, '0'));
-    END IF;
-END//
-DELIMITER ;
 
 CREATE TABLE IF NOT EXISTS patients (
     id                INT AUTO_INCREMENT PRIMARY KEY,
@@ -61,16 +46,6 @@ CREATE TABLE IF NOT EXISTS patients (
     FOREIGN KEY (created_by) REFERENCES users(id)
 );
 
-DELIMITER //
-CREATE TRIGGER IF NOT EXISTS generate_patient_code
-BEFORE INSERT ON patients
-FOR EACH ROW
-BEGIN
-    DECLARE next_num INT;
-    SELECT COALESCE(MAX(id), 0) + 1 INTO next_num FROM patients;
-    SET NEW.patient_code = CONCAT('PT', LPAD(next_num, 4, '0'));
-END//
-DELIMITER ;
 
 CREATE TABLE IF NOT EXISTS appointments (
     id               INT AUTO_INCREMENT PRIMARY KEY,
