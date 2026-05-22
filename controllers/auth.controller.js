@@ -155,6 +155,28 @@ const me = asyncHandler(async (req, res) => {
 
     return success(res, 200, 'Profile fetched', users[0]);
 });
+// POST /api/auth/refresh-token
+const refreshToken = asyncHandler(async (req, res) => {
+    const { refreshToken: token } = req.body;
+    if (!token) return error(res, 400, 'Refresh token is required');
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET);
+        const [users] = await pool.query('SELECT * FROM users WHERE id = ? AND refresh_token = ? AND isDeleted = false', [decoded.id, token]);
+        if (users.length === 0) return error(res, 401, 'Invalid refresh token');
+
+        const user = users[0];
+        const newAccessToken = jwt.sign(
+            { id: user.id, role: user.role, user_code: user.user_code },
+            process.env.JWT_SECRET,
+            { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+        );
+
+        return success(res, 200, 'Token refreshed', { accessToken: newAccessToken });
+    } catch (err) {
+        return error(res, 401, 'Refresh token expired. Please login again.');
+    }
+});
 
 // #7 POST /api/auth/logout
 const logout = asyncHandler(async (req, res) => {
@@ -171,4 +193,4 @@ const getDoctors = asyncHandler(async (req, res) => {
 });
 
 
-module.exports = { register, login, forgotPassword, verifyOTP, resetPassword, me, logout ,getDoctors};
+module.exports = { register, login, forgotPassword, verifyOTP, resetPassword, me, logout,refreshToken ,getDoctors};

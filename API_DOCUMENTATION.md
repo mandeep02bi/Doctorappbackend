@@ -217,6 +217,11 @@ Authorization: Bearer <accessToken>
 **Frontend:** Clear all tokens + user data → Login screen.
 
 ---
+### #7 POST /api/auth/refresh-token
+{ "status": true, "status_code": 200, "message": "Token refreshed", "data": { "accessToken": "eyJhbGciOiJIUzI1NiIs..." } }
+❌ 400:{ "status": false, "status_code": 400, "message": "Refresh token is required", "data": null }
+❌ 401 Invalid token:{ "status": false, "status_code": 401, "message": "Invalid refresh token", "data": null }
+❌ 401 Expired:{ "status": false, "status_code": 401, "message": "Refresh token expired. Please login again"}
 
 ### #8 GET /api/auth/doctors
 **Who:** All logged in (Admin, Doctor, Staff all need this)

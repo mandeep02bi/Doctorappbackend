@@ -28,7 +28,7 @@ app.use('/api/admin', require('./routes/admin.routes'));
 
 // Health check
 app.get('/', (req, res) => {
-    res.json({ status: true, message: 'Medical API is running' });
+    res.json({ status: true, message: 'Medical APIs are running' });
 });
 
 // Error handler
