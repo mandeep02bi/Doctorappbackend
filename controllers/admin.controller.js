@@ -1,4 +1,5 @@
 const pool = require('../config/db');
+const bcrypt = require('bcryptjs');
 const asyncHandler = require('../middlewares/asyncHandler');
 const { success, error } = require('../utils/response');
 
@@ -42,9 +43,23 @@ const adminDashboard = asyncHandler(async (req, res) => {
 
 // #71 GET /api/admin/users
 const getAllUsers = asyncHandler(async (req, res) => {
-    const [rows] = await pool.query(
-        "SELECT user_code, first_name, last_name, email, phone, role, isVerified, last_login_at, created_at FROM users WHERE isDeleted = false AND role != 'Admin' ORDER BY created_at DESC"
-    );
+    const { status } = req.query;
+
+    let query = "SELECT user_code, first_name, last_name, email, phone, role, isVerified, isDeleted, last_login_at, created_at FROM users WHERE role != 'Admin'";
+
+    if (status === 'approved') {
+        query += ' AND isVerified = true AND isDeleted = false';
+    } else if (status === 'pending') {
+        query += ' AND isVerified = false AND isDeleted = false';
+    } else if (status === 'rejected') {
+        query += ' AND isDeleted = true';
+    } else {
+        query += ' AND isDeleted = false';
+    }
+
+    query += ' ORDER BY created_at DESC';
+
+    const [rows] = await pool.query(query);
     return success(res, 200, 'Users fetched', rows);
 });
 
