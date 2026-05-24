@@ -1654,6 +1654,23 @@ Same ownership patterns.
 **❌ 404:** `{ "status": false, "status_code": 404, "message": "User not found", "data": null }`
 
 ---
+### #79 PATCH /api/admin/change-password
+✅ 200:
+json{ "status": true, "status_code": 200, "message": "Password changed successfully", "data": null }
+❌ 400:
+json{ "status": false, "status_code": 400, "message": "Old password and new password are required", "data": null }
+❌ 401:
+json{ "status": false, "status_code": 401, "message": "Old password is incorrect", "data": null }
+❌ 403:
+json{ "status": false, "status_code": 403, "message": "Access denied", "data": null }
+Request from Postman:
+PATCH /api/admin/change-password
+Headers: Authorization: Bearer <admin_token>
+Body:
+{
+  "old_password": "Admin@2026",
+  "new_password": "NewAdmin@2026"
+}
 
 # 🖥️ ADMIN PANEL — Screen Structure
 
