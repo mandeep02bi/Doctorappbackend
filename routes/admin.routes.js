@@ -15,6 +15,6 @@ router.post('/create-user', auth, role('Admin'), createUser);
 router.get('/pending', auth, role('Admin'), pending);
 router.patch('/approve/:user_code', auth, role('Admin'), approve);
 router.patch('/reject/:user_code', auth, role('Admin'), reject);
-router.patch('/change-password',role('Admin'),changePassword);
+router.patch('/change-password',auth , role('Admin'),changePassword);
 router.patch('/users/:user_code/role', auth, role('Admin'), changeUserRole);
 module.exports = router;
