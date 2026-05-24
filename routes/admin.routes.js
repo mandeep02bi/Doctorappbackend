@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const auth = require('../middlewares/auth');
 const role = require('../middlewares/role');
-const { adminDashboard, getAllUsers, getUser, getAdminPatients, getAdminPatient, resetPdfLimit, deleteUser,createUser,pending , approve,reject } = require('../controllers/admin.controller');
+const { adminDashboard, getAllUsers, getUser, getAdminPatients, getAdminPatient, resetPdfLimit, deleteUser,createUser,pending , approve,reject,changePassword } = require('../controllers/admin.controller');
 
 router.get('/dashboard', auth, role('Admin'), adminDashboard);
 router.get('/users', auth, role('Admin'), getAllUsers);
@@ -15,5 +15,5 @@ router.post('/create-user', auth, role('Admin'), createUser);
 router.get('/pending', auth, role('Admin'), pending);
 router.patch('/approve/:user_code', auth, role('Admin'), approve);
 router.patch('/reject/:user_code', auth, role('Admin'), reject);
-
+router.patch('/change-password',role('admin'),changePassword);
 module.exports = router;

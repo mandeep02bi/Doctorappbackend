@@ -1873,7 +1873,7 @@ bool showDoctorDropdown = r != 'Doctor'; // Doctor auto-selects self
 | 75 | PATCH | /api/admin/reject/:user_code | Admin |
 | 76 | GET | /api/admin/patients | Admin |
 | 77 | GET | /api/admin/patients/:patient_code | Admin |
-| 78 | PATCH | /api/admin/reset-limit/:user_code | Admin |
+| 78 | PATCH | /api/admin/change-password | Admin |
 
 ---
 

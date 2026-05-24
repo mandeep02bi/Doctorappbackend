@@ -228,5 +228,19 @@ const reject = asyncHandler(async (req, res) => {
 
     return success(res, 200, 'User rejected and removed');
 });
+// PATCH /api/admin/change-password
+const changePassword = asyncHandler(async (req, res) => {
+    const { old_password, new_password } = req.body;
+    if (!old_password || !new_password) return error(res, 400, 'Old password and new password are required');
 
-module.exports = { adminDashboard, getAllUsers, getUser, getAdminPatients, getAdminPatient, resetPdfLimit, deleteUser,createUser,approve,reject,pending };
+    const [users] = await pool.query('SELECT password FROM users WHERE id = ?', [req.user.id]);
+    const match = await bcrypt.compare(old_password, users[0].password);
+    if (!match) return error(res, 401, 'Old password is incorrect');
+
+    const hash = await bcrypt.hash(new_password, 10);
+    await pool.query('UPDATE users SET password = ? WHERE id = ?', [hash, req.user.id]);
+
+    return success(res, 200, 'Password changed successfully');
+});
+
+module.exports = { adminDashboard, getAllUsers, getUser, getAdminPatients, getAdminPatient, resetPdfLimit, deleteUser,createUser,approve,reject,pending,changePassword };
