@@ -242,5 +242,25 @@ const changePassword = asyncHandler(async (req, res) => {
 
     return success(res, 200, 'Password changed successfully');
 });
+// PATCH /api/admin/users/:user_code/role
+// PATCH /api/admin/users/:user_code/role
+const changeUserRole = asyncHandler(async (req, res) => {
+    const { role: newRole } = req.body;
+    if (!['Doctor', 'Staff'].includes(newRole)) return error(res, 400, 'Role must be Doctor or Staff');
 
-module.exports = { adminDashboard, getAllUsers, getUser, getAdminPatients, getAdminPatient, resetPdfLimit, deleteUser,createUser,approve,reject,pending,changePassword };
+    const [users] = await pool.query('SELECT id, role FROM users WHERE user_code = ? AND isDeleted = false', [req.params.user_code]);
+    if (users.length === 0) return error(res, 404, 'User not found');
+    if (users[0].role === 'Admin') return error(res, 400, 'Cannot change admin role');
+    if (users[0].role === newRole) return error(res, 400, 'User already has this role');
+
+    // Generate new code
+    const prefix = newRole === 'Doctor' ? 'DR' : 'ST';
+    const [[{ count }]] = await pool.query('SELECT COUNT(*) AS count FROM users WHERE role = ?', [newRole]);
+    const newCode = prefix + String(count + 1).padStart(4, '0');
+
+    await pool.query('UPDATE users SET role = ?, user_code = ? WHERE id = ?', [newRole, newCode, users[0].id]);
+
+    return success(res, 200, 'Role updated successfully', { new_user_code: newCode });
+});
+
+module.exports = { adminDashboard, getAllUsers, getUser, getAdminPatients, getAdminPatient, resetPdfLimit, deleteUser,createUser,approve,reject,pending,changePassword , changeUserRole };

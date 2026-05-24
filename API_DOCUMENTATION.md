@@ -1672,6 +1672,30 @@ Body:
   "new_password": "NewAdmin@2026"
 }
 
+### #79 PATCH /api/admin/users/:user_code/role
+✅ 200 Success:
+json{ "status": true, "status_code": 200, "message": "Role updated successfully", "data": { "new_user_code": "DR0004" } }
+❌ 400 Invalid role:
+json{ "status": false, "status_code": 400, "message": "Role must be Doctor or Staff", "data": null }
+❌ 400 Same role:
+json{ "status": false, "status_code": 400, "message": "User already has this role", "data": null }
+❌ 400 Admin protected:
+json{ "status": false, "status_code": 400, "message": "Cannot change admin role", "data": null }
+❌ 403 Not admin:
+json{ "status": false, "status_code": 403, "message": "Access denied", "data": null }
+❌ 404 User not found:
+json{ "status": false, "status_code": 404, "message": "User not found", "data": null }
+❌ 401 No token:
+json{ "status": false, "status_code": 401, "message": "Not authenticated", "data": nul}
+PATCH /api/admin/users/ST0001/role
+Headers: Authorization: Bearer <admin_token>
+Body:
+{
+  "role": "Doctor"
+}
+
+
+
 # 🖥️ ADMIN PANEL — Screen Structure
 
 ```
