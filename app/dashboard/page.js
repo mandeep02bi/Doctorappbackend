@@ -39,6 +39,7 @@ export default function HomeDashboard() {
   const [rejectedUsers, setrejectedUsers] = useState([]);
   const [confirmedRoles, setConfirmedRoles] = useState({});
   const [roleModal, setRoleModal] = useState(null);
+  const [confirmModal, setConfirmModal] = useState(null); // { user, decision }
   const [actionLoading, setActionLoading] = useState(null);
 
   const fetchDashboard = async () => {
@@ -53,7 +54,7 @@ export default function HomeDashboard() {
     }
   };
 
-const loadusers = async () => {
+  const loadusers = async () => {
     try {
       const { data } = await api.get("/admin/users");
       setUsers(data.data);
@@ -61,7 +62,6 @@ const loadusers = async () => {
       console.error("Error fetching users data:", error);
     }
   };
-  
 
   const fetchpending = async () => {
     try {
@@ -71,6 +71,7 @@ const loadusers = async () => {
       console.error("Error fetching users data:", error);
     }
   };
+
   const fetchapproved = async () => {
     try {
       const { data } = await api.get("/admin/users", { params: { status: "approved" } });
@@ -102,7 +103,6 @@ const loadusers = async () => {
   const [activeTab, setActiveTab] = useState("pending");
   const [toastMessage, setToastMessage] = useState(null);
 
-  // Trigger brief floating toast notifications
   const triggerToast = (msg, type = "success") => {
     setToastMessage({ text: msg, type });
     setTimeout(() => {
@@ -147,7 +147,6 @@ const loadusers = async () => {
 
     try {
       const endpoint = decision === "approve" ? "approve" : "reject";
-
       const { data } = await api.patch(`/admin/${endpoint}/${userCode}`);
 
       if (data.status !== false) {
@@ -173,35 +172,49 @@ const loadusers = async () => {
     }
   };
 
-  const openRoleModal = (user, decision = null) => {
+  // Opens role change modal only (no decision)
+  const openRoleModal = (user) => {
     const confirmedRole = confirmedRoles[user.user_code]?.role;
     const currentRole = ["Doctor", "Staff"].includes(user.role) ? user.role : "";
 
     setRoleModal({
       user,
-      decision,
       role: confirmedRole || currentRole || "",
     });
   };
 
-  const handleUserDecision = async (user, decision) => {
-    const confirmed = confirmedRoles[user.user_code];
-
-    if (!confirmed) {
-      openRoleModal(user, decision);
-      return;
-    }
-
-    await runUserDecision(user, decision, confirmed.userCode, confirmed.role);
+  // Opens approve/reject confirmation modal
+  const handleUserDecision = (user, decision) => {
+    setConfirmModal({ user, decision });
   };
 
+  // Called when user confirms approve/reject in confirmation modal
+  const handleConfirmDecision = async () => {
+    if (!confirmModal) return;
+    const { user, decision } = confirmModal;
+    setConfirmModal(null);
+
+    const confirmed = confirmedRoles[user.user_code];
+    let userCode = user.user_code;
+    let role = confirmed?.role || user.role || "Staff";
+
+    // If a role is confirmed but not yet synced, update role first
+    if (confirmed) {
+      userCode = confirmed.userCode;
+      role = confirmed.role;
+    }
+
+    await runUserDecision(user, decision, userCode, role);
+  };
+
+  // Saves role from role modal (no approve/reject triggered)
   const handleConfirmRole = async () => {
     if (!roleModal?.user || !roleModal.role) {
       triggerToast("Please select Doctor or Staff role.", "error");
       return;
     }
 
-    const { user, role, decision } = roleModal;
+    const { user, role } = roleModal;
     setActionLoading(`role-${user.user_code}`);
 
     try {
@@ -217,19 +230,22 @@ const loadusers = async () => {
 
       setRoleModal(null);
       await refreshDashboardData();
-      triggerToast(`${getUserDisplayName(user)} role confirmed as ${role}`);
-
-      if (decision) {
-        await runUserDecision(user, decision, confirmedUserCode, role);
-      }
+      triggerToast(`${getUserDisplayName(user)} role updated to ${role}`);
     } catch (error) {
-      triggerToast(error.message || "Role confirmation failed", "error");
+      triggerToast(error.message || "Role update failed", "error");
     } finally {
       setActionLoading(null);
     }
   };
 
   const handleRejectExistingUser = async (user) => {
+    setConfirmModal({ user, decision: "reject", isExisting: true });
+  };
+
+  const handleConfirmExistingReject = async () => {
+    if (!confirmModal) return;
+    const { user } = confirmModal;
+    setConfirmModal(null);
     setActionLoading(`reject-${user.user_code}`);
 
     try {
@@ -247,8 +263,6 @@ const loadusers = async () => {
       setActionLoading(null);
     }
   };
-
-  // Filter users lists based on active tabs
 
   return (
     <div className="space-y-6">
@@ -287,7 +301,6 @@ const loadusers = async () => {
           <h2 className="text-2xl font-bold tracking-tight text-slate-800 font-outfit">
             Admin Dashboard
           </h2>
-         
         </div>
         <button
           type="button"
@@ -317,15 +330,14 @@ const loadusers = async () => {
               {totalDoctors}
             </span>
           </div>
-         
         </div>
 
-        {/* Card 2: Consultation Rooms */}
+        {/* Card 2: Total Staff */}
         <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden group">
           <div className="absolute top-0 right-0 h-16 w-16 bg-emerald-500/5 rounded-bl-full pointer-events-none group-hover:scale-110 transition-transform" />
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-              Total Satff
+              Total Staff
             </span>
             <div className="p-2 bg-emerald-500/10 rounded-xl text-emerald-500">
               <Building className="h-5 w-5" />
@@ -338,7 +350,7 @@ const loadusers = async () => {
           </div>
         </div>
 
-        {/* Card 3: Active Support Staff */}
+        {/* Card 3: Pending Approvals */}
         <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden group">
           <div className="absolute top-0 right-0 h-16 w-16 bg-blue-500/5 rounded-bl-full pointer-events-none group-hover:scale-110 transition-transform" />
           <div className="flex items-center justify-between">
@@ -353,12 +365,10 @@ const loadusers = async () => {
             <span className="text-3xl font-bold text-slate-800 tracking-tight">
               {totalRooms}
             </span>
-            
           </div>
-          
         </div>
 
-        {/* Card 4: Pending Authorizations */}
+        {/* Card 4: Total Patients */}
         <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden group">
           <div className="absolute top-0 right-0 h-16 w-16 bg-amber-500/5 rounded-bl-full pointer-events-none group-hover:scale-110 transition-transform" />
           <div className="flex items-center justify-between">
@@ -377,9 +387,8 @@ const loadusers = async () => {
         </div>
       </div>
 
-      {/* 3. User Onboarding Control Panel (Tabs & Tables) */}
+      {/* 3. User Onboarding Control Panel */}
       <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-hidden flex flex-col">
-        {/* Header Tab togglers */}
         <div className="px-6 py-4 border-b border-slate-200/60 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <FileCheck className="h-5 w-5 text-slate-500" />
@@ -389,7 +398,6 @@ const loadusers = async () => {
           </div>
 
           <div className="flex items-center gap-1 bg-slate-200/60 p-1 rounded-xl self-start sm:self-auto">
-            {/* Pending Tab */}
             <button
               onClick={() => setActiveTab("pending")}
               className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all focus:outline-none cursor-pointer flex items-center gap-1.5 ${
@@ -406,7 +414,6 @@ const loadusers = async () => {
               )}
             </button>
 
-            {/* Approved Tab */}
             <button
               onClick={() => setActiveTab("approved")}
               className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all focus:outline-none cursor-pointer flex items-center gap-1.5 ${
@@ -421,7 +428,6 @@ const loadusers = async () => {
               </span>
             </button>
 
-            {/* Rejected Tab */}
             <button
               onClick={() => setActiveTab("rejected")}
               className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all focus:outline-none cursor-pointer flex items-center gap-1.5 ${
@@ -437,8 +443,6 @@ const loadusers = async () => {
             </button>
           </div>
         </div>
-
-        {/* Tab Workspaces */}
         <div className="p-6 overflow-x-auto">
           <AnimatePresence mode="wait">
             {/* Tab: PENDING */}
@@ -457,8 +461,7 @@ const loadusers = async () => {
                       No Pending Applications
                     </h4>
                     <p className="text-xs text-slate-400 font-light mt-1">
-                      All applicant submissions have been evaluated
-                      successfully.
+                      All applicant submissions have been evaluated successfully.
                     </p>
                   </div>
                 ) : (
@@ -466,86 +469,83 @@ const loadusers = async () => {
                     <thead>
                       <tr className="border-b border-slate-100 text-xs font-semibold text-slate-400 uppercase tracking-wider pb-3">
                         <th className="pb-3.5 font-semibold">Applicant Info</th>
-                        <th className="pb-3.5 font-semibold"> Role</th>
-
+                        <th className="pb-3.5 font-semibold">Role</th>
                         <th className="pb-3.5 font-semibold">Applied Date</th>
-                        <th className="pb-3.5 font-semibold text-right">
-                          Actions Panel
-                        </th>
+                        <th className="pb-3.5 font-semibold text-right">Actions Panel</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-sm">
-                      {pendingUsers.map((user,inx) => {
+                      {pendingUsers.map((user, inx) => {
                         const confirmedRole = confirmedRoles[user.user_code]?.role;
                         const isApproveLoading = actionLoading === `approve-${user.user_code}`;
                         const isRejectLoading = actionLoading === `reject-${user.user_code}`;
 
                         return (
-                        <tr
-                          key={inx}
-                          className="group hover:bg-slate-50/50 transition-colors"
-                        >
-                          <td className="py-4">
-                            <div className="flex flex-col">
-                              <span className="font-semibold text-slate-700">
-                                {user.name}
-                              </span>
-                              <span className="text-xs text-slate-400 font-light">
-                                {user.email}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="py-4">
-                            <div className="flex flex-col gap-1.5">
-                              <button
-                                onClick={() => openRoleModal(user)}
-                                disabled={Boolean(actionLoading)}
-                                className={`w-40 rounded-lg border px-3 py-2 text-xs font-semibold shadow-sm transition-all focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed ${
-                                  confirmedRole
-                                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                                    : "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
-                                }`}
-                              >
-                                {confirmedRole ? `Confirmed: ${confirmedRole}` : "Confirm role"}
-                              </button>
-                              <span className="text-[10px] text-slate-400">
-                                Current: {user.role || "Staff"}
-                              </span>
-                            </div>
-                          </td>
+                          <tr
+                            key={inx}
+                            className="group hover:bg-slate-50/50 transition-colors"
+                          >
+                            <td className="py-4">
+                              <div className="flex flex-col">
+                                <span className="font-semibold text-slate-700">
+                                  {user.name}
+                                </span>
+                                <span className="text-sm text-slate-600 font-semibold font-light">
+                                  {user.email}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="py-4">
+                              <div className="flex flex-col gap-1.5">
+                                <button
+                                  onClick={() => openRoleModal(user)}
+                                  disabled={Boolean(actionLoading)}
+                                  className={`w-40 rounded-lg border px-3 py-2 text-xs font-semibold shadow-sm transition-all focus:outline-none disabled:opacity-60 
+                                    border-green-200
+                                    text-green-700 disabled:cursor-not-allowed "border-emerald-200 bg-emerald-50 text-emerald-700"
+                                      
+                                  `}
+                                >
+                                   Change Role
+                                </button>
+                                <span className="text-[10px] text-slate-400">
+                                  Current: {user.role || "Staff"}
+                                </span>
+                              </div>
+                            </td>
 
-                          <td className="py-4 text-xs text-slate-500">
-                            {user.created_at.split("T")[0]}
-                          </td>
-                          <td className="py-4 text-right">
-                            <div className="flex items-center justify-end gap-2.5">
-                              <button
-                                onClick={() => handleUserDecision(user, "reject")}
-                                disabled={Boolean(actionLoading)}
-                                className="px-3 py-1.5 border border-rose-200 text-rose-600 hover:bg-rose-50 rounded-lg text-xs font-semibold cursor-pointer transition-all focus:outline-none flex items-center gap-1 disabled:opacity-60 disabled:cursor-not-allowed"
-                              >
-                                {isRejectLoading ? (
-                                  <span className="h-3.5 w-3.5 border-2 border-rose-200 border-t-rose-600 rounded-full animate-spin" />
-                                ) : (
-                                  <UserX className="h-3.5 w-3.5" />
-                                )}
-                                Reject
-                              </button>
-                              <button
-                                onClick={() => handleUserDecision(user, "approve")}
-                                disabled={Boolean(actionLoading)}
-                                className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-xs font-semibold cursor-pointer transition-all shadow-md shadow-emerald-500/10 hover:shadow-emerald-600/20 focus:outline-none flex items-center gap-1 disabled:opacity-60 disabled:cursor-not-allowed"
-                              >
-                                {isApproveLoading ? (
-                                  <span className="h-3.5 w-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                ) : (
-                                  <UserCheck2 className="h-3.5 w-3.5" />
-                                )}
-                                Approve
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
+                            <td className="py-4 text-xs text-slate-500">
+                              {user.created_at.split("T")[0]}
+                            </td>
+                            <td className="py-4 text-right">
+                              <div className="flex items-center justify-end gap-2.5">
+                                <button
+                                  onClick={() => handleUserDecision(user, "reject")}
+                                  disabled={Boolean(actionLoading)}
+                                  className="px-3 py-1.5 border border-rose-200 text-rose-600 hover:bg-rose-50 rounded-lg text-xs font-semibold cursor-pointer transition-all focus:outline-none flex items-center gap-1 disabled:opacity-60 disabled:cursor-not-allowed"
+                                >
+                                  {isRejectLoading ? (
+                                    <span className="h-3.5 w-3.5 border-2 border-rose-200 border-t-rose-600 rounded-full animate-spin" />
+                                  ) : (
+                                    <UserX className="h-3.5 w-3.5" />
+                                  )}
+                                  Reject
+                                </button>
+                                <button
+                                  onClick={() => handleUserDecision(user, "approve")}
+                                  disabled={Boolean(actionLoading)}
+                                  className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-xs font-semibold cursor-pointer transition-all shadow-md shadow-emerald-500/10 hover:shadow-emerald-600/20 focus:outline-none flex items-center gap-1 disabled:opacity-60 disabled:cursor-not-allowed"
+                                >
+                                  {isApproveLoading ? (
+                                    <span className="h-3.5 w-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                  ) : (
+                                    <UserCheck2 className="h-3.5 w-3.5" />
+                                  )}
+                                  Approve
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
                         );
                       })}
                     </tbody>
@@ -570,8 +570,7 @@ const loadusers = async () => {
                       No Approved Users Yet
                     </h4>
                     <p className="text-xs text-slate-400 font-light mt-1">
-                      Approve pending profiles to populate your clinical
-                      registry.
+                      Approve pending profiles to populate your clinical registry.
                     </p>
                   </div>
                 ) : (
@@ -580,14 +579,9 @@ const loadusers = async () => {
                       <tr className="border-b border-slate-100 text-xs font-semibold text-slate-400 uppercase tracking-wider pb-3">
                         <th className="pb-3.5 font-semibold">User Info</th>
                         <th className="pb-3.5 font-semibold">Assigned Role</th>
-                        
                         <th className="pb-3.5 font-semibold">Approval Date</th>
-                        <th className="pb-3.5 font-semibold text-right">
-                          Access Status
-                        </th>
-                        <th className="pb-3.5 font-semibold text-right">
-                          Action
-                        </th>
+                        <th className="pb-3.5 font-semibold text-right">Access Status</th>
+                        <th className="pb-3.5 font-semibold text-right">Action</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-sm">
@@ -617,7 +611,6 @@ const loadusers = async () => {
                               {user.role}
                             </span>
                           </td>
-                          
                           <td className="py-4 text-xs text-slate-500">
                             {user.created_at.split("T")[0]}
                           </td>
@@ -627,7 +620,7 @@ const loadusers = async () => {
                               Active Panelist
                             </span>
                           </td>
-                            <td className="py-4 text-right">
+                          <td className="py-4 text-right">
                             <div className="flex items-center justify-end gap-2.5">
                               <button
                                 onClick={() => handleRejectExistingUser(user)}
@@ -641,7 +634,6 @@ const loadusers = async () => {
                                 )}
                                 Reject
                               </button>
-                             
                             </div>
                           </td>
                         </tr>
@@ -678,14 +670,11 @@ const loadusers = async () => {
                         <th className="pb-3.5 font-semibold">User Info</th>
                         <th className="pb-3.5 font-semibold">Target Role</th>
                         <th className="pb-3.5 font-semibold">Audit Date</th>
-                        <th className="pb-3.5 font-semibold text-right">
-                          Credential State
-                        </th>
-                       
+                        <th className="pb-3.5 font-semibold text-right">Credential State</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-sm">
-                      {rejectedUsers.map((user,idx) => (
+                      {rejectedUsers.map((user, idx) => (
                         <tr
                           key={idx}
                           className="group hover:bg-slate-50/50 transition-colors"
@@ -702,10 +691,9 @@ const loadusers = async () => {
                           </td>
                           <td className="py-4">
                             <span className="text-xs text-slate-500 font-medium">
-                              {user.role }
+                              {user.role}
                             </span>
                           </td>
-                         
                           <td className="py-4 text-xs text-slate-500">
                             {user.created_at.split("T")[0]}
                           </td>
@@ -714,7 +702,6 @@ const loadusers = async () => {
                               Access Denied
                             </span>
                           </td>
-                          
                         </tr>
                       ))}
                     </tbody>
@@ -726,6 +713,7 @@ const loadusers = async () => {
         </div>
       </div>
 
+      {/* ── Change Role Modal ── */}
       <AnimatePresence>
         {roleModal && (
           <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
@@ -746,10 +734,10 @@ const loadusers = async () => {
               <div className="p-6 space-y-5">
                 <div>
                   <h3 className="text-lg font-bold text-slate-800 font-outfit">
-                    Confirm User Role
+                    Change Role
                   </h3>
                   <p className="text-sm text-slate-500 mt-1">
-                    Select Doctor or Staff before approving or rejecting this application.
+                    Select a role for this user. This will be applied before any approve or reject action.
                   </p>
                 </div>
 
@@ -771,10 +759,7 @@ const loadusers = async () => {
                       key={role}
                       type="button"
                       onClick={() =>
-                        setRoleModal((current) => ({
-                          ...current,
-                          role,
-                        }))
+                        setRoleModal((current) => ({ ...current, role }))
                       }
                       className={`rounded-xl border px-4 py-3 text-sm font-semibold transition-all focus:outline-none ${
                         roleModal.role === role
@@ -805,6 +790,107 @@ const loadusers = async () => {
                       <span className="h-3.5 w-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     )}
                     Save Role
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Approve / Reject Confirmation Modal ── */}
+      <AnimatePresence>
+        {confirmModal && (
+          <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.6 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setConfirmModal(null)}
+              className="fixed inset-0 bg-slate-950"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 14 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 14 }}
+              className="bg-white border border-slate-200 w-full max-w-sm rounded-2xl shadow-2xl z-10 relative overflow-hidden"
+            >
+              <div
+                className={`h-1.5 ${
+                  confirmModal.decision === "approve"
+                    ? "bg-gradient-to-r from-emerald-400 to-emerald-600"
+                    : "bg-gradient-to-r from-rose-400 to-rose-600"
+                }`}
+              />
+              <div className="p-6 space-y-4">
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`p-2.5 rounded-xl ${
+                      confirmModal.decision === "approve"
+                        ? "bg-emerald-50 text-emerald-600"
+                        : "bg-rose-50 text-rose-600"
+                    }`}
+                  >
+                    {confirmModal.decision === "approve" ? (
+                      <UserCheck2 className="h-5 w-5" />
+                    ) : (
+                      <UserX className="h-5 w-5" />
+                    )}
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-slate-800 font-outfit">
+                      {confirmModal.decision === "approve" ? "Approve User" : "Reject User"}
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      This action will update the user's access status.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                  Are you sure you want to{" "}
+                  <span
+                    className={`font-bold ${
+                      confirmModal.decision === "approve"
+                        ? "text-emerald-600"
+                        : "text-rose-600"
+                    }`}
+                  >
+                    {confirmModal.decision}
+                  </span>{" "}
+                  <span className="font-semibold">
+                    {getUserDisplayName(confirmModal.user)}
+                  </span>
+                  ?
+                </div>
+
+                <div className="flex justify-end gap-3 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setConfirmModal(null)}
+                    className="px-4 py-2 text-xs font-semibold text-slate-500 border border-slate-200 hover:bg-slate-50 rounded-xl transition-all cursor-pointer focus:outline-none"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={
+                      confirmModal.isExisting
+                        ? handleConfirmExistingReject
+                        : handleConfirmDecision
+                    }
+                    className={`px-4 py-2 text-xs font-semibold text-white rounded-xl shadow-md transition-all cursor-pointer focus:outline-none flex items-center gap-2 ${
+                      confirmModal.decision === "approve"
+                        ? "bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20"
+                        : "bg-rose-500 hover:bg-rose-600 shadow-rose-500/20"
+                    }`}
+                  >
+                    {confirmModal.decision === "approve" ? (
+                      <UserCheck2 className="h-3.5 w-3.5" />
+                    ) : (
+                      <UserX className="h-3.5 w-3.5" />
+                    )}
+                    Yes, {confirmModal.decision === "approve" ? "Approve" : "Reject"}
                   </button>
                 </div>
               </div>
