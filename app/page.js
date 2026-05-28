@@ -369,7 +369,7 @@ export default function LoginPage() {
           </div>
          
           <p className="mt-1.5 text-sm text-slate-400">
-            Clinical Operations & Staff Panel
+            Admin Panel
           </p>
         </div>
 
