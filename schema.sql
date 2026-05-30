@@ -19,6 +19,8 @@ CREATE TABLE IF NOT EXISTS users (
     last_login_at   DATETIME      DEFAULT NULL,
     created_at      TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
     updated_at      TIMESTAMP     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    otp_count       INT           DEFAULT 0
+    otp_date        DATE          DEFAULT NULL
 );
 
 

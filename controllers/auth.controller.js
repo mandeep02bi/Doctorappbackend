@@ -90,15 +90,22 @@ const login = asyncHandler(async (req, res) => {
 const forgotPassword = asyncHandler(async (req, res) => {
     const { email } = req.body;
 
-    const [users] = await pool.query('SELECT id FROM users WHERE email = ? AND isDeleted = false', [email]);
-    if (users.length === 0) {
-        return error(res, 404, 'No account found with this email');
+    const [users] = await pool.query('SELECT id, otp_count, otp_date FROM users WHERE email = ? AND isDeleted = false', [email]);
+    if (users.length === 0) return error(res, 404, 'No account found with this email');
+
+    // Check daily limit
+    const today = new Date().toISOString().split('T')[0];
+    const lastDate = users[0].otp_date ? new Date(users[0].otp_date).toISOString().split('T')[0] : null;
+
+    if (lastDate === today && users[0].otp_count >= 2) {
+        return error(res, 429, 'You have reached your daily limit of password reset. Please try again tomorrow.');
     }
 
     const otp = generateOTP();
-    const expiry = new Date(Date.now() + 10 * 60 * 1000); // 10 min
+    const expiry = new Date(Date.now() + 10 * 60 * 1000);
+    const newCount = (lastDate === today) ? users[0].otp_count + 1 : 1;
 
-    await pool.query('UPDATE users SET otp = ?, otp_expiry = ? WHERE email = ?', [otp, expiry, email]);
+    await pool.query('UPDATE users SET otp = ?, otp_expiry = ?, otp_count = ?, otp_date = CURDATE() WHERE email = ?', [otp, expiry, newCount, email]);
     await sendEmail(email, 'Password Reset OTP - VimPal Smart Clinic', otp);
 
     return success(res, 200, 'OTP sent to your email');
