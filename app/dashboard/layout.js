@@ -239,7 +239,7 @@ export default function DashboardLayout({ children }) {
               <LogOut className="h-5 w-5 group-hover:rotate-12 transition-transform text-slate-400 group-hover:text-rose-400" />
             </div>
             {sidebarExpanded && (
-              <span className="font-light truncate">Secue Sign Out</span>
+              <span className="font-light truncate">Secre Sign Out</span>
             )}
           </button>
         </div>
@@ -316,7 +316,7 @@ export default function DashboardLayout({ children }) {
                   className="w-full flex items-center gap-3.5 py-3 px-4 rounded-xl text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 text-sm font-medium transition-all focus:outline-none cursor-pointer"
                 >
                   <LogOut className="h-5 w-5 shrink-0" />
-                  <span className="font-light">Secure Sign Out</span>
+                  <span className="font-light">Secre Sign Out</span>
                 </button>
               </div>
             </motion.aside>
@@ -371,7 +371,7 @@ export default function DashboardLayout({ children }) {
               {/* Highlight header accent */}
               <div className="absolute top-0 left-0 right-0 h-[3px] bg-rose-500" />
               
-              <h3 className="text-lg font-bold text-slate-800 font-outfit mb-2">Secure Sign Out</h3>
+              <h3 className="text-lg font-bold text-slate-800 font-outfit mb-2">Secre Sign Out</h3>
               <p className="text-sm text-slate-500 leading-relaxed">
                 Are you absolutely sure you want to log out of your AuraHealth clinical portal? You will need to verify your credentials again.
               </p>
