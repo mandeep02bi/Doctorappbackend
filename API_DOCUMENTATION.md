@@ -964,7 +964,7 @@ Types: `"Medicine"` | `"Lab Test"` | `"Instruction"` | `"Certificate"`
 **✅ 201:** `{ "status": true, "status_code": 201, "message": "Template created", "data": { "id": 1 } }`
 
 **❌ 400:** `{ "status": false, "status_code": 400, "message": "Type, title and content are required", "data": null }`
-
+**❌ 404:**  '{ "status": false, "status_code": 404, "message": "Doctor not found", "data": null }'
 **❌ 400:** `{ "status": false, "status_code": 400, "message": "Type must be Medicine, Lab Test, Instruction or Certificate", "data": null }`
 
 **Template content format:**

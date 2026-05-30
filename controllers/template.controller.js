@@ -3,12 +3,20 @@ const asyncHandler = require('../middlewares/asyncHandler');
 const { success, error } = require('../utils/response');
 
 const createTemplate = asyncHandler(async (req, res) => {
-    const { type, title, content } = req.body;
+    const { type, title, content, doctor_code } = req.body;
     if (!type || !title || !content) return error(res, 400, 'Type, title and content are required');
-    const valid = ['Medicine', 'Lab Test', 'Instruction'];
-    if (!valid.includes(type)) return error(res, 400, 'Type must be Medicine, Lab Test or Instruction');
+    const valid = ['Medicine', 'Lab Test', 'Instruction', 'Certificate'];
+    if (!valid.includes(type)) return error(res, 400, 'Type must be Medicine, Lab Test, Instruction or Certificate');
 
-    const [result] = await pool.query('INSERT INTO templates (created_by, type, title, content) VALUES (?, ?, ?, ?)', [req.user.id, type, title, content]);
+    // Determine creator
+    let createdBy = req.user.id;
+    if (doctor_code && req.user.role === 'Admin') {
+        const [doc] = await pool.query("SELECT id FROM users WHERE user_code = ? AND role = 'Doctor' AND isDeleted = false", [doctor_code]);
+        if (doc.length === 0) return error(res, 404, 'Doctor not found');
+        createdBy = doc[0].id;
+    }
+
+    const [result] = await pool.query('INSERT INTO templates (created_by, type, title, content) VALUES (?, ?, ?, ?)', [createdBy, type, title, content]);
     return success(res, 201, 'Template created', { id: result.insertId });
 });
 
