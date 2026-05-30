@@ -26,6 +26,12 @@ const getAllTemplates = asyncHandler(async (req, res) => {
         CONCAT(u.first_name, ' ', u.last_name) AS created_by_name, u.user_code AS doctor_code
         FROM templates t INNER JOIN users u ON u.id = t.created_by WHERE t.isDeleted = false`;
     const params = [];
+
+    if (req.user.role === 'Doctor') {
+        query += ' AND t.created_by = ?';
+        params.push(req.user.id);
+    }
+
     if (type) { query += ' AND t.type = ?'; params.push(type); }
     query += ' ORDER BY t.created_at DESC';
     const [rows] = await pool.query(query, params);
@@ -33,8 +39,16 @@ const getAllTemplates = asyncHandler(async (req, res) => {
 });
 
 const getTemplate = asyncHandler(async (req, res) => {
-    const [rows] = await pool.query(`SELECT t.*, CONCAT(u.first_name, ' ', u.last_name) AS created_by_name, u.user_code AS doctor_code
-        FROM templates t INNER JOIN users u ON u.id = t.created_by WHERE t.id = ? AND t.isDeleted = false`, [req.params.id]);
+    let query = `SELECT t.*, CONCAT(u.first_name, ' ', u.last_name) AS created_by_name, u.user_code AS doctor_code
+        FROM templates t INNER JOIN users u ON u.id = t.created_by WHERE t.id = ? AND t.isDeleted = false`;
+    const params = [req.params.id];
+
+    if (req.user.role === 'Doctor') {
+        query += ' AND t.created_by = ?';
+        params.push(req.user.id);
+    }
+
+    const [rows] = await pool.query(query, params);
     if (rows.length === 0) return error(res, 404, 'Template not found');
     const tmpl = rows[0]; delete tmpl.isDeleted;
     return success(res, 200, 'Template fetched', tmpl);
@@ -45,6 +59,12 @@ const searchTemplates = asyncHandler(async (req, res) => {
     if (!q) return success(res, 200, 'Search results', []);
     let query = 'SELECT id, type, title FROM templates WHERE isDeleted = false AND title LIKE ?';
     const params = [`%${q}%`];
+
+    if (req.user.role === 'Doctor') {
+        query += ' AND created_by = ?';
+        params.push(req.user.id);
+    }
+
     if (type) { query += ' AND type = ?'; params.push(type); }
     query += ' ORDER BY title ASC LIMIT 20';
     const [rows] = await pool.query(query, params);

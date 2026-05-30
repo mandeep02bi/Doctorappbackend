@@ -133,6 +133,7 @@ Authorization: Bearer <accessToken>
 ---
 
 ### #3 POST /api/auth/forgot-password
+
 **Who:** Anyone | **Screen:** Login → "Forgot Password?"
 
 **Request:** `{ "email": "amit@doctor.com" }`
@@ -140,6 +141,7 @@ Authorization: Bearer <accessToken>
 **✅ 200:** `{ "status": true, "status_code": 200, "message": "OTP sent to your email", "data": null }`
 
 **❌ 404:** `{ "status": false, "status_code": 404, "message": "No account found with this email", "data": null }`
+❌ 429: { "status": false, "status_code": 429, "message": "You have reached your daily limit of password reset. Please try again tomorrow.", "data": null }
 
 **Frontend:** Navigate to OTP screen. OTP expires in 10 minutes.
 
@@ -921,6 +923,8 @@ Same response patterns as prescriptions.
 ---
 
 ### #50 POST /api/templates
+| doctor_code | string | ❌ | Admin only. Assigns template to specific doctor. Without it, admin is creator. |
+
 **Who:** Doctor, Admin
 
 Types: `"Medicine"` | `"Lab Test"` | `"Instruction"` | `"Certificate"`
@@ -930,7 +934,8 @@ Types: `"Medicine"` | `"Lab Test"` | `"Instruction"` | `"Certificate"`
 {
   "type": "Medicine",
   "title": "Viral Fever - Adult",
-  "content": "[{\"name\":\"Tab Paracetamol 500mg\",\"total_quantity\":\"10\",\"frequency\":\"1-0-1\",\"route_form\":\"Oral\",\"no_of_days\":\"5\",\"instructions\":\"After food\",\"additional_comments\":\"If fever persists\"}]"
+  "content": "[{\"name\":\"Tab Paracetamol 500mg\",\"total_quantity\":\"10\",\"frequency\":\"1-0-1\",\"route_form\":\"Oral\",\"no_of_days\":\"5\",\"instructions\":\"After food\",\"additional_comments\":\"If fever persists\"}]",
+  "doctor_code": "DR001"  
 }
 ```
 
@@ -939,7 +944,8 @@ Types: `"Medicine"` | `"Lab Test"` | `"Instruction"` | `"Certificate"`
 {
   "type": "Lab Test",
   "title": "Female Infertility Panel",
-  "content": "[{\"test_name\":\"FSH\",\"additional_comments\":\"Day 2-3 of cycle\"},{\"test_name\":\"LH\",\"additional_comments\":\"Day 2-3 of cycle\"}]"
+  "content": "[{\"test_name\":\"FSH\",\"additional_comments\":\"Day 2-3 of cycle\"},{\"test_name\":\"LH\",\"additional_comments\":\"Day 2-3 of cycle\"}]",
+  "doctor_code": "DR001" 
 }
 ```
 
@@ -948,18 +954,11 @@ Types: `"Medicine"` | `"Lab Test"` | `"Instruction"` | `"Certificate"`
 {
   "type": "Instruction",
   "title": "Epley Maneuver for BPPV",
-  "content": "{\"title\":\"Epley Maneuver for BPPV\",\"description\":\"Step 1: Sit on bed...\"}"
+  "content": "{\"title\":\"Epley Maneuver for BPPV\",\"description\":\"Step 1: Sit on bed...\"}",
+  "doctor_code": "DR001" 
 }
 ```
 
-**Request (Certificate):**
-```json
-{
-  "type": "Certificate",
-  "title": "Fitness Certificate",
-  "content": "{\"title\":\"Fitness Certificate\",\"description\":\"This is to certify that Mr/Mrs _____ has been examined...\"}"
-}
-```
 
 **✅ 201:** `{ "status": true, "status_code": 201, "message": "Template created", "data": { "id": 1 } }`
 
@@ -974,13 +973,13 @@ Types: `"Medicine"` | `"Lab Test"` | `"Instruction"` | `"Certificate"`
 | Medicine | `[{name, total_quantity, frequency, route_form, no_of_days, instructions, additional_comments}]` | `jsonDecode()` → List |
 | Lab Test | `[{test_name, additional_comments}]` | `jsonDecode()` → List |
 | Instruction | `{title, description}` | `jsonDecode()` → Map |
-| Certificate | `{title, description}` | `jsonDecode()` → Map |
 
 ---
 
-### #51 GET /api/templates — `?type=Medicine` | `?type=Lab Test` | `?type=Instruction` | `?type=Certificate`
-
+### #51 GET /api/templates — `?type=Medicine` | `?type=Lab Test` | `?type=Instruction` 
+Note: Doctor sees only their own templates (auto-filtered by token). Admin/Staff sees all.
 **✅ 200:**
+
 ```json
 {
   "status": true, "status_code": 200, "message": "Templates fetched",
