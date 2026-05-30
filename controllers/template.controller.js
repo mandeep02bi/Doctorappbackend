@@ -5,8 +5,8 @@ const { success, error } = require('../utils/response');
 const createTemplate = asyncHandler(async (req, res) => {
     const { type, title, content, doctor_code } = req.body;
     if (!type || !title || !content) return error(res, 400, 'Type, title and content are required');
-    const valid = ['Medicine', 'Lab Test', 'Instruction', 'Certificate'];
-    if (!valid.includes(type)) return error(res, 400, 'Type must be Medicine, Lab Test, Instruction or Certificate');
+    const valid = ['Medicine', 'Lab Test', 'Instruction'];
+    if (!valid.includes(type)) return error(res, 400, 'Type must be Medicine, Lab Test, Instruction');
 
     // Determine creator
     let createdBy = req.user.id;
@@ -72,8 +72,32 @@ const searchTemplates = asyncHandler(async (req, res) => {
 });
 
 const updateTemplate = asyncHandler(async (req, res) => {
-    const { type, title, content } = req.body;
-    await pool.query('UPDATE templates SET type = ?, title = ?, content = ? WHERE id = ? AND isDeleted = false', [type, title, content, req.params.id]);
+    const { type, title, content, doctor_code } = req.body;
+
+    let query = 'SELECT id, created_by FROM templates WHERE id = ? AND isDeleted = false';
+    const params = [req.params.id];
+
+    if (req.user.role === 'Doctor') {
+        query += ' AND created_by = ?';
+        params.push(req.user.id);
+    }
+
+    const [tmpl] = await pool.query(query, params);
+    if (tmpl.length === 0) return error(res, 404, 'Template not found');
+
+    // Admin can reassign template to different doctor
+    let createdBy = tmpl[0].created_by;
+    if (doctor_code && req.user.role === 'Admin') {
+        const [doc] = await pool.query("SELECT id FROM users WHERE user_code = ? AND role = 'Doctor' AND isDeleted = false", [doctor_code]);
+        if (doc.length === 0) return error(res, 404, 'Doctor not found');
+        createdBy = doc[0].id;
+    }
+
+    await pool.query(
+        'UPDATE templates SET type = ?, title = ?, content = ?, created_by = ? WHERE id = ?',
+        [type, title, content, createdBy, req.params.id]
+    );
+
     return success(res, 200, 'Template updated');
 });
 
