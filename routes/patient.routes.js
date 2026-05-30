@@ -8,7 +8,7 @@ router.post('/', auth, role('Admin', 'Doctor', 'Staff'), createPatient);
 router.get('/', auth, role('Admin', 'Doctor', 'Staff'), getAllPatients);
 router.get('/search', auth, role('Admin', 'Doctor', 'Staff'), searchPatients);
 router.get('/:patient_code', auth, role('Admin', 'Doctor', 'Staff'), getPatient);
-router.put('/:patient_code', auth, role('Admin', 'Staff'), updatePatient);
+router.put('/:patient_code', auth, role('Admin', 'Staff','Doctor'), updatePatient);
 router.delete('/:patient_code', auth, role('Admin', 'Staff'), deletePatient);
 
 module.exports = router;
