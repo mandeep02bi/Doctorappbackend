@@ -239,7 +239,7 @@ export default function DashboardLayout({ children }) {
               <LogOut className="h-5 w-5 group-hover:rotate-12 transition-transform text-slate-400 group-hover:text-rose-400" />
             </div>
             {sidebarExpanded && (
-              <span className="font-light truncate">Secure Sign Out</span>
+              <span className="font-light truncate">Secue Sign Out</span>
             )}
           </button>
         </div>

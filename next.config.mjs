@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  /* config options here */
+  outputFileTracingRoot: '/home/adixonclinicos/htdocs/adixonclinicos.info/admin-panel',
 };
 
 export default nextConfig;
