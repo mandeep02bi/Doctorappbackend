@@ -39,12 +39,11 @@ const getAllPatients = asyncHandler(async (req, res) => {
         query += ' AND doctor_id = ?';
         params.push(req.user.id);
     } else if (doctor_code) {
-        const [doc] = await pool.query("SELECT id FROM users WHERE user_code = ? AND role = 'Doctor' AND isDeleted = false", [doctor_code]);
-        if (doc.length > 0) {
-            query += ' AND doctor_id = ?';
-            params.push(doc[0].id);
-        }
-    }
+    const [doc] = await pool.query("SELECT id FROM users WHERE user_code = ? AND role = 'Doctor' AND isDeleted = false", [doctor_code]);
+    if (doc.length === 0) return error(res, 404, 'Doctor not found');
+    query += ' AND doctor_id = ?';
+    params.push(doc[0].id);
+}
 
     query += ' ORDER BY created_at DESC';
     const [rows] = await pool.query(query, params);
