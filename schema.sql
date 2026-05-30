@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS patients (
     id                INT AUTO_INCREMENT PRIMARY KEY,
     patient_code      VARCHAR(10)   UNIQUE DEFAULT NULL,
     created_by        INT NOT NULL,
+    doctor_id         INT DEFAULT NULL,
     first_name        VARCHAR(100)  NOT NULL,
     middle_name       VARCHAR(100)  DEFAULT NULL,
     last_name         VARCHAR(100)  NOT NULL,
