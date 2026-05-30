@@ -36,10 +36,10 @@ const initDB = async () => {
                 BEGIN
                     DECLARE next_num INT;
                     IF NEW.role = 'Doctor' THEN
-                        SELECT COUNT(*) + 1 INTO next_num FROM users WHERE role = 'Doctor';
+                        SELECT COALESCE(MAX(CAST(SUBSTRING(user_code, 3) AS UNSIGNED)), 0) + 1 INTO next_num FROM users WHERE role = 'Doctor';
                         SET NEW.user_code = CONCAT('DR', LPAD(next_num, 4, '0'));
                     ELSEIF NEW.role = 'Staff' THEN
-                        SELECT COUNT(*) + 1 INTO next_num FROM users WHERE role = 'Staff';
+                        SELECT COALESCE(MAX(CAST(SUBSTRING(user_code, 3) AS UNSIGNED)), 0) + 1 INTO next_num FROM users WHERE role = 'Staff';
                         SET NEW.user_code = CONCAT('ST', LPAD(next_num, 4, '0'));
                     END IF;
                 END
@@ -52,10 +52,11 @@ const initDB = async () => {
                 FOR EACH ROW
                 BEGIN
                     DECLARE next_num INT;
-                    SELECT COALESCE(MAX(id), 0) + 1 INTO next_num FROM patients;
+                    SELECT COALESCE(MAX(CAST(SUBSTRING(patient_code, 3) AS UNSIGNED)), 0) + 1 INTO next_num FROM patients;
                     SET NEW.patient_code = CONCAT('PT', LPAD(next_num, 4, '0'));
                 END
             `);
+            console.log('Triggers created');
         } catch (err) {
             console.log('Trigger note:', err.message.substring(0, 80));
         } finally {
@@ -63,16 +64,15 @@ const initDB = async () => {
         }
 
         // Seed admin
-       // Seed admin
-const [admins] = await pool.query('SELECT id FROM users WHERE role = ? LIMIT 1', ['Admin']);
-if (admins.length === 0) {
-    const hash = await bcrypt.hash('Admin@2026', 10);
-    await pool.query(
-        'INSERT INTO users (first_name, last_name, email, phone, password, role, isVerified) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        ['Super', 'Admin', 'np6866181@gmail.com', '0000000000', hash, 'Admin', true]
-    );
-    console.log('Admin seeded: np6866181@gmail.com / Admin@2026');
-}
+        const [admins] = await pool.query('SELECT id FROM users WHERE role = ? LIMIT 1', ['Admin']);
+        if (admins.length === 0) {
+            const hash = await bcrypt.hash('Admin@2026', 10);
+            await pool.query(
+                'INSERT INTO users (first_name, last_name, email, phone, password, role, isVerified) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                ['Super', 'Admin', 'np6866181@gmail.com', '0000000000', hash, 'Admin', true]
+            );
+            console.log('Admin seeded: np6866181@gmail.com / Admin@2026');
+        }
 
         console.log('Database initialized');
     } catch (err) {
