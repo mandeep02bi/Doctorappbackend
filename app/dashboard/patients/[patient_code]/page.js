@@ -5,7 +5,6 @@ import { useParams, useRouter } from "next/navigation";
 import api from "@/utils/api";
 import {
   AlertCircle,
-  ArrowLeft,
   Calendar,
   ClipboardList,
   Droplet,
@@ -14,6 +13,7 @@ import {
   MapPin,
   Phone,
   Stethoscope,
+  Trash2,
   UserRound,
 } from "lucide-react";
 
@@ -45,6 +45,18 @@ function DetailBlock({ label, value, icon: Icon }) {
   );
 }
 
+function ProfileSection({ title, subtitle, children }) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 md:p-5">
+      <div className="mb-4">
+        <h3 className="text-sm font-bold text-slate-800 font-outfit">{title}</h3>
+        {subtitle && <p className="mt-0.5 text-xs text-slate-400">{subtitle}</p>}
+      </div>
+      {children}
+    </div>
+  );
+}
+
 export default function PatientDetailPage() {
   const router = useRouter();
   const params = useParams();
@@ -55,6 +67,8 @@ export default function PatientDetailPage() {
   const [loading, setLoading] = useState(true);
   const [prescriptionsLoading, setPrescriptionsLoading] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
 
   const triggerToast = (msg, type = "error") => {
@@ -75,6 +89,12 @@ export default function PatientDetailPage() {
     return [record?.first_name, record?.middle_name, record?.last_name]
       .filter(Boolean)
       .join(" ") || "Unnamed Patient";
+  };
+
+  const getDoctorName = (record) => {
+    const name = record?.doctor_name || record?.doctor?.name;
+    if (!name) return "Not available";
+    return name.trim().toLowerCase().startsWith("dr.") ? name : `Dr. ${name}`;
   };
 
   const loadPrescriptionDetail = useCallback(async (prescription) => {
@@ -138,6 +158,28 @@ export default function PatientDetailPage() {
     }
   }, [loadPrescriptionDetail, patientCode]);
 
+  const deletePatient = async () => {
+    if (!patientCode) return;
+    setDeleteLoading(true);
+
+    try {
+      const { data } = await api.delete(`/patients/${patientCode}`);
+      if (data.status === false) {
+        throw new Error(data.message || "Failed to delete patient.");
+      }
+
+      triggerToast(data.message || "Patient deleted successfully.", "success");
+      setDeleteConfirmOpen(false);
+      setTimeout(() => {
+        router.push("/dashboard/patients");
+      }, 650);
+    } catch (error) {
+      triggerToast(error.message || "Unable to delete patient.");
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
   useEffect(() => {
     queueMicrotask(() => {
       loadPatient();
@@ -169,15 +211,6 @@ export default function PatientDetailPage() {
         </div>
       )}
 
-      <button
-        type="button"
-        onClick={() => router.push("/dashboard/patients")}
-        className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 shadow-sm hover:bg-slate-50 focus:outline-none"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back to Patients
-      </button>
-
       {loading ? (
         <div className="rounded-2xl border border-slate-200 bg-white py-20 text-center text-sm font-semibold text-slate-400">
           Loading patient profile...
@@ -198,7 +231,7 @@ export default function PatientDetailPage() {
                   {patient?.gender || "Unknown"} | {patient?.age || "-"} yrs | Registered {formatDate(patient?.created_at)}
                 </p>
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap justify-start lg:justify-end gap-2">
                 <span className="inline-flex items-center gap-1 rounded-lg border border-rose-100 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700">
                   <Droplet className="h-3.5 w-3.5" />
                   {patient?.blood_group || "N/A"}
@@ -207,20 +240,87 @@ export default function PatientDetailPage() {
                   <FileText className="h-3.5 w-3.5" />
                   {prescriptions.length} prescriptions
                 </span>
+                <button
+                  type="button"
+                  onClick={() => setDeleteConfirmOpen(true)}
+                  className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-white px-3 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 focus:outline-none"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Delete Patient
+                </button>
               </div>
             </div>
 
-            <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              <InfoTile label="Email" value={patient?.email} icon={Mail} />
-              <InfoTile label="Phone" value={patient?.phone} icon={Phone} />
-              <InfoTile label="Birth Date" value={formatDate(patient?.date_of_birth)} icon={Calendar} />
-              <InfoTile label="Created By" value={patient?.created_by_name} icon={UserRound} />
-              <InfoTile label="Address" value={patient?.street_address} icon={MapPin} />
-              <InfoTile label="City / State" value={[patient?.city, patient?.state].filter(Boolean).join(", ")} icon={MapPin} />
-              <InfoTile label="ZIP Code" value={patient?.zip_code} icon={MapPin} />
-              <InfoTile label="Patient Code" value={patient?.patient_code || patientCode} icon={Stethoscope} />
+            <div className="mt-5 grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_360px] gap-4">
+              <div className="space-y-4">
+                <ProfileSection title="Patient Contact" subtitle="Primary contact and demographic details.">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    <InfoTile label="Email" value={patient?.email} icon={Mail} />
+                    <InfoTile label="Phone" value={patient?.phone} icon={Phone} />
+                    <InfoTile label="Birth Date" value={formatDate(patient?.date_of_birth)} icon={Calendar} />
+                  </div>
+                </ProfileSection>
+
+                <ProfileSection title="Residential Details" subtitle="Address information kept separate for easier scanning.">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    <InfoTile label="Address" value={patient?.street_address} icon={MapPin} />
+                    <InfoTile label="City / State" value={[patient?.city, patient?.state].filter(Boolean).join(", ")} icon={MapPin} />
+                    <InfoTile label="ZIP Code" value={patient?.zip_code} icon={MapPin} />
+                  </div>
+                </ProfileSection>
+              </div>
+
+              <ProfileSection title="Doctor & Registry" subtitle="Care owner and creation metadata.">
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-1 gap-3">
+                  <InfoTile label="Doctor" value={getDoctorName(patient)} icon={Stethoscope} />
+                  <InfoTile label="Doctor Code" value={patient?.doctor_code} icon={Stethoscope} />
+                  <InfoTile label="Created By" value={patient?.created_by_name} icon={UserRound} />
+                  <InfoTile label="Created At" value={formatDate(patient?.created_at)} icon={Calendar} />
+                </div>
+              </ProfileSection>
             </div>
           </section>
+
+          {deleteConfirmOpen && (
+            <section className="rounded-2xl border border-rose-200 bg-rose-50 p-5 shadow-sm">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-rose-200 bg-white text-rose-600">
+                    <AlertCircle className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-rose-800 font-outfit">Delete this patient?</h3>
+                    <p className="mt-1 text-xs text-rose-600">
+                      This will remove {getPatientName(patient)} from the patient registry.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setDeleteConfirmOpen(false)}
+                    disabled={deleteLoading}
+                    className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-60"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={deletePatient}
+                    disabled={deleteLoading}
+                    className="inline-flex items-center gap-2 rounded-xl bg-rose-500 px-4 py-2 text-xs font-semibold text-white hover:bg-rose-600 disabled:opacity-60"
+                  >
+                    {deleteLoading ? (
+                      <span className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                    ) : (
+                      <Trash2 className="h-3.5 w-3.5" />
+                    )}
+                    Yes, Delete
+                  </button>
+                </div>
+              </div>
+            </section>
+          )}
 
           <section className="grid grid-cols-1 xl:grid-cols-[360px_minmax(0,1fr)] gap-6">
             <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
@@ -228,7 +328,7 @@ export default function PatientDetailPage() {
                 <h3 className="text-sm font-bold text-slate-800 font-outfit">Full Prescription List</h3>
                 <p className="mt-0.5 text-xs text-slate-400">Click any prescription to view complete data.</p>
               </div>
-              <div className="max-h-[680px] overflow-y-auto p-4 space-y-3">
+              <div className={`${prescriptions.length > 10 ? "admin-scroll-panel" : ""} p-4 space-y-3`}>
                 {prescriptionsLoading ? (
                   <div className="py-10 text-center text-xs font-semibold text-slate-400">Loading prescriptions...</div>
                 ) : prescriptions.length === 0 ? (
