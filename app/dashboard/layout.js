@@ -108,6 +108,7 @@ export default function DashboardLayout({ children }) {
   const getPageTitle = () => {
     if (pathname === "/dashboard") return "Operations Home Dashboard";
     if (pathname === "/dashboard/doctors") return "Doctors Registry Directory";
+    if (pathname?.startsWith("/dashboard/doctors/")) return "Doctor Clinical Profile";
     if (pathname === "/dashboard/staff") return "Nurses & Support Staff";
     if (pathname === "/dashboard/patients") return "Patients Registry";
     if (pathname?.startsWith("/dashboard/patients/")) return "Patient Clinical Record";

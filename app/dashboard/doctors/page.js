@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import api from "@/utils/api";
 import {
@@ -29,6 +30,8 @@ import {
 } from "lucide-react";
 
 export default function DoctorsRegistryPage() {
+  const router = useRouter();
+
   // 1. Core Doctor Registry State
   const [doctors, setDoctors] = useState([]);
 
@@ -208,7 +211,7 @@ export default function DoctorsRegistryPage() {
           {filteredDoctors.map((doctor) => (
             <motion.div
               key={doctor.user_code}
-              onClick={() => setSelectedDoctor(doctor)}
+              onClick={() => router.push(`/dashboard/doctors/${doctor.user_code}`)}
               className="bg-white border border-slate-200 hover:border-primary/40 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer flex flex-col justify-between group relative overflow-hidden"
             >
               {/* Top Accent Dot */}

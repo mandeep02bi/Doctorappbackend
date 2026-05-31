@@ -842,7 +842,7 @@ export default function HomeDashboard() {
                       {confirmModal.decision === "approve" ? "Approve User" : "Reject User"}
                     </h3>
                     <p className="text-xs text-slate-400 mt-0.5">
-                      This action will update the user's access status.
+                      This action will update the user&apos;s access status.
                     </p>
                   </div>
                 </div>
