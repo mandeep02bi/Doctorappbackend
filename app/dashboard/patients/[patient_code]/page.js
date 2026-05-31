@@ -45,12 +45,11 @@ function DetailBlock({ label, value, icon: Icon }) {
   );
 }
 
-function ProfileSection({ title, subtitle, children }) {
+function ProfileSection({ title, children }) {
   return (
     <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 md:p-5">
       <div className="mb-4">
         <h3 className="text-sm font-bold text-slate-800 font-outfit">{title}</h3>
-        {subtitle && <p className="mt-0.5 text-xs text-slate-400">{subtitle}</p>}
       </div>
       {children}
     </div>
@@ -253,7 +252,7 @@ export default function PatientDetailPage() {
 
             <div className="mt-5 grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_360px] gap-4">
               <div className="space-y-4">
-                <ProfileSection title="Patient Contact" subtitle="Primary contact and demographic details.">
+                <ProfileSection title="Patient Contact">
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     <InfoTile label="Email" value={patient?.email} icon={Mail} />
                     <InfoTile label="Phone" value={patient?.phone} icon={Phone} />
@@ -261,7 +260,7 @@ export default function PatientDetailPage() {
                   </div>
                 </ProfileSection>
 
-                <ProfileSection title="Residential Details" subtitle="Address information kept separate for easier scanning.">
+                <ProfileSection title="Residential Details">
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     <InfoTile label="Address" value={patient?.street_address} icon={MapPin} />
                     <InfoTile label="City / State" value={[patient?.city, patient?.state].filter(Boolean).join(", ")} icon={MapPin} />
@@ -270,7 +269,7 @@ export default function PatientDetailPage() {
                 </ProfileSection>
               </div>
 
-              <ProfileSection title="Doctor & Registry" subtitle="Care owner and creation metadata.">
+              <ProfileSection title="Doctor & Registry">
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-1 gap-3">
                   <InfoTile label="Doctor" value={getDoctorName(patient)} icon={Stethoscope} />
                   <InfoTile label="Doctor Code" value={patient?.doctor_code} icon={Stethoscope} />

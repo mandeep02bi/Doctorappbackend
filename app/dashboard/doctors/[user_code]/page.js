@@ -49,6 +49,17 @@ function StatTile({ label, value, icon: Icon }) {
   );
 }
 
+function ProfileSection({ title, children }) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 md:p-5">
+      <div className="mb-4">
+        <h3 className="text-sm font-bold text-slate-800 font-outfit">{title}</h3>
+      </div>
+      {children}
+    </div>
+  );
+}
+
 export default function DoctorDetailPage() {
   const router = useRouter();
   const params = useParams();
@@ -220,13 +231,29 @@ export default function DoctorDetailPage() {
               </div>
             </div>
 
-            <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <InfoTile label="Email" value={doctor.email} icon={Mail} />
-              <InfoTile label="Phone" value={doctor.phone ? `+91 ${doctor.phone}` : "Not available"} icon={Phone} />
-              <InfoTile label="Platform" value={doctor.platform} icon={MonitorSmartphone} />
-              <InfoTile label="Device Type" value={doctor.device_type} icon={MonitorSmartphone} />
-              <InfoTile label="Last Login" value={formatDate(doctor.last_login_at, true)} icon={Clock} />
-              <InfoTile label="Created At" value={formatDate(doctor.created_at, true)} icon={Calendar} />
+            <div className="mt-5 grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+              <div className="space-y-4">
+                <ProfileSection title="Contact">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <InfoTile label="Email" value={doctor.email} icon={Mail} />
+                    <InfoTile label="Phone" value={doctor.phone ? `+91 ${doctor.phone}` : "Not available"} icon={Phone} />
+                  </div>
+                </ProfileSection>
+
+                <ProfileSection title="Device">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <InfoTile label="Platform" value={doctor.platform} icon={MonitorSmartphone} />
+                    <InfoTile label="Device Type" value={doctor.device_type} icon={MonitorSmartphone} />
+                  </div>
+                </ProfileSection>
+              </div>
+
+              <ProfileSection title="Login & Created">
+                <div className="grid grid-cols-1 gap-3">
+                  <InfoTile label="Last Login" value={formatDate(doctor.last_login_at, true)} icon={Clock} />
+                  <InfoTile label="Created At" value={formatDate(doctor.created_at, true)} icon={Calendar} />
+                </div>
+              </ProfileSection>
             </div>
           </section>
 
@@ -275,7 +302,6 @@ export default function DoctorDetailPage() {
             <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
               <div className="border-b border-slate-100 bg-slate-50 px-5 py-4">
                 <h3 className="text-sm font-bold text-slate-800 font-outfit">Doctor Stats</h3>
-                <p className="mt-0.5 text-xs text-slate-400">Appointments, prescriptions, certificates, and instructions.</p>
               </div>
               <div className="grid grid-cols-1 gap-4 p-5 sm:grid-cols-2">
                 <StatTile label="Appointments" value={doctor.stats?.total_appointments} icon={Calendar} />
@@ -288,7 +314,6 @@ export default function DoctorDetailPage() {
             <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
               <div className="border-b border-slate-100 bg-slate-50 px-5 py-4">
                 <h3 className="text-sm font-bold text-slate-800 font-outfit">Access Snapshot</h3>
-                <p className="mt-0.5 text-xs text-slate-400">Current account and device status.</p>
               </div>
               <div className="space-y-3 p-5">
                 <InfoTile label="Verification" value={doctor.isVerified ? "Verified" : "Pending verification"} icon={ShieldCheck} />
@@ -301,7 +326,6 @@ export default function DoctorDetailPage() {
             <div className="flex flex-col gap-3 border-b border-slate-100 bg-slate-50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h3 className="text-sm font-bold text-slate-800 font-outfit">Assigned Patients</h3>
-                <p className="mt-0.5 text-xs text-slate-400">Click a patient to open the full patient record.</p>
               </div>
               {patients.length > 5 && (
                 <button
