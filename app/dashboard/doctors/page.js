@@ -187,11 +187,11 @@ export default function DoctorsRegistryPage() {
           />
         </div>
         <div className="text-xs text-slate-400 font-medium whitespace-nowrap self-end md:self-auto">
-          Active roster specialists:{" "}
+          Active:{" "}
           <span className="text-slate-800 font-bold">
             {filteredDoctors.length}
           </span>{" "}
-          of <span className="text-slate-800">{doctors.length}</span> physicians
+          of <span className="text-slate-800">{doctors.length}</span> Doctors
         </div>
       </div>
 

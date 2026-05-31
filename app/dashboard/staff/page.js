@@ -250,7 +250,7 @@ export default function StaffRegistryPage() {
           />
         </div>
         <div className="text-xs text-slate-400 font-medium whitespace-nowrap self-end md:self-auto">
-          Active roster specialists:{" "}
+          Active :{" "}
           <span className="text-slate-800 font-bold">
             {filteredStaff.length}
           </span>{" "}
@@ -402,43 +402,9 @@ export default function StaffRegistryPage() {
                   </div>
                 </div>
 
-                <div className="space-y-2.5">
-                  <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                    Activity Statistics
-                  </h4>
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                    {[
-                      ["Appointments", selectedStaff.stats?.total_appointments || 0],
-                      ["Prescriptions", selectedStaff.stats?.total_prescriptions || 0],
-                      ["Certificates", selectedStaff.stats?.total_certificates || 0],
-                      ["Instructions", selectedStaff.stats?.total_instructions || 0],
-                    ].map(([label, value]) => (
-                      <div key={label} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                        <span className="block text-xl font-bold text-slate-800">{value}</span>
-                        <span className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mt-1">{label}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+               
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-slate-600">
-                  <div className="rounded-xl border border-slate-200 bg-white p-3">
-                    <span className="block text-slate-400 font-semibold uppercase tracking-wider text-[10px]">Platform</span>
-                    <span className="block mt-1 text-slate-700">{selectedStaff.platform || "Not available"}</span>
-                  </div>
-                  <div className="rounded-xl border border-slate-200 bg-white p-3">
-                    <span className="block text-slate-400 font-semibold uppercase tracking-wider text-[10px]">Device Type</span>
-                    <span className="block mt-1 text-slate-700">{selectedStaff.device_type || "Not available"}</span>
-                  </div>
-                  <div className="rounded-xl border border-slate-200 bg-white p-3">
-                    <span className="block text-slate-400 font-semibold uppercase tracking-wider text-[10px]">Last Login</span>
-                    <span className="block mt-1 text-slate-700">{formatDate(selectedStaff.last_login_at)}</span>
-                  </div>
-                  <div className="rounded-xl border border-slate-200 bg-white p-3">
-                    <span className="block text-slate-400 font-semibold uppercase tracking-wider text-[10px]">Created</span>
-                    <span className="block mt-1 text-slate-700">{formatDate(selectedStaff.created_at)}</span>
-                  </div>
-                </div>
+               
 
                 {deleteConfirmOpen && (
                   <div className="rounded-xl border border-rose-200 bg-rose-50 p-4">

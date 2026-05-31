@@ -36,7 +36,6 @@ export default function DashboardLayout({ children }) {
     iconStyle 
   } = useTheme();
 
-  // Component states
   const [mounted, setMounted] = useState(false);
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -44,28 +43,21 @@ export default function DashboardLayout({ children }) {
   const [user, setUser] = useState(null);
   const [showNotifications, setShowNotifications] = useState(false);
 
-  // Setup client checks and load session
+  // Session validate karo — accesstoken nahi hai toh login pe redirect
   useEffect(() => {
     let active = true;
     const accessToken = localStorage.getItem("accesstoken");
 
     if (!accessToken) {
-      // Redirect back to login if no session is active
       router.push("/");
     } else {
       const validateSession = async () => {
         try {
           const { data } = await api.get("/auth/me");
-
-          if (data?.status === false) {
-            throw new Error(data.message || "Session expired");
-          }
-
+          if (data?.status === false) throw new Error(data.message || "Session expired");
           if (!active) return;
           const profile = data?.data || null;
-          if (profile) {
-            localStorage.setItem("user", JSON.stringify(profile));
-          }
+          if (profile) localStorage.setItem("user", JSON.stringify(profile));
           setUser(profile);
           setMounted(true);
         } catch {
@@ -76,15 +68,13 @@ export default function DashboardLayout({ children }) {
           if (active) router.push("/");
         }
       };
-
       validateSession();
     }
 
-    return () => {
-      active = false;
-    };
+    return () => { active = false; };
   }, [router]);
 
+  // Session validate ho rahi hai tab full screen spinner
   if (!mounted) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-950">
@@ -93,80 +83,88 @@ export default function DashboardLayout({ children }) {
     );
   }
 
-  // Sidebar Menu configuration
   const menuItems = [
-    { name: "Home Dashboard", path: "/dashboard", icon: Home },
-    { name: "Doctors Registry", path: "/dashboard/doctors", icon: Users },
-    { name: "Staff Directory", path: "/dashboard/staff", icon: UserSquare2 },
-    { name: "Patients Registry", path: "/dashboard/patients", icon: HeartPulse },
-    { name: "Theme Customizer", path: "/dashboard/theme", icon: Palette },
-    { name: "Business Settings", path: "/dashboard/business", icon: Briefcase },
-    { name: "Admin Settings", path: "/dashboard/settings", icon: Settings },
+    { name: "Home Dashboard",    path: "/dashboard",                  icon: Home },
+    { name: "Doctors Registry",  path: "/dashboard/doctors",          icon: Users },
+    { name: "Staff Directory",   path: "/dashboard/staff",            icon: UserSquare2 },
+    { name: "Patients Registry", path: "/dashboard/patients",         icon: HeartPulse },
+    { name: "Theme Customizer",  path: "/dashboard/theme",            icon: Palette },
+    { name: "Business Settings", path: "/dashboard/business",         icon: Briefcase },
+    { name: "Admin Settings",    path: "/dashboard/settings",         icon: Settings },
   ];
 
-  // Helper for determining dynamic page titles
   const getPageTitle = () => {
-    if (pathname === "/dashboard") return "Operations Home Dashboard";
-    if (pathname === "/dashboard/doctors") return "Doctors Registry Directory";
-    if (pathname?.startsWith("/dashboard/doctors/")) return "Doctor Clinical Profile";
-    if (pathname === "/dashboard/staff") return "Nurses & Support Staff";
-    if (pathname === "/dashboard/patients") return "Patients Registry";
-    if (pathname?.startsWith("/dashboard/patients/")) return "Patient Clinical Record";
-    if (pathname === "/dashboard/create-certificate") return "Create Templates";
-    if (pathname === "/dashboard/theme") return "Visual Theme Customizer";
-    if (pathname === "/dashboard/business") return "Clinical Business Settings";
-    if (pathname === "/dashboard/settings") return "Administrator Configuration";
+    if (pathname === "/dashboard")                          return "Operations Home Dashboard";
+    if (pathname === "/dashboard/doctors")                  return "Doctors Registry Directory";
+    if (pathname?.startsWith("/dashboard/doctors/"))        return "Doctor Clinical Profile";
+    if (pathname === "/dashboard/staff")                    return "Nurses & Support Staff";
+    if (pathname === "/dashboard/patients")                 return "Patients Registry";
+    if (pathname?.startsWith("/dashboard/patients/"))       return "Patient Clinical Record";
+    if (pathname === "/dashboard/create-certificate")       return "Create Templates";
+    if (pathname === "/dashboard/theme")                    return "Visual Theme Customizer";
+    if (pathname === "/dashboard/business")                 return "Clinical Business Settings";
+    if (pathname === "/dashboard/settings")                 return "Administrator Configuration";
     return "Clinical Management Control";
   };
 
-  // Logout handler
-  const handleLogout = async() => {
-   try {
-    await api.post("/auth/logout");
-    localStorage.removeItem("accesstoken");
-    localStorage.removeItem("refreshtoken");
-    localStorage.removeItem("user");
-    localStorage.removeItem("aurahealth_session");
-    router.push("/");
-   } catch (error) {
-    console.error("Logout failed", error); 
-   }
-   
+  const handleLogout = async () => {
+    try {
+      await api.post("/auth/logout");
+    } catch (error) {
+      console.error("Logout failed", error);
+    } finally {
+      localStorage.removeItem("accesstoken");
+      localStorage.removeItem("refreshtoken");
+      localStorage.removeItem("user");
+      localStorage.removeItem("aurahealth_session");
+      router.push("/");
+    }
   };
 
-  // Determine Appbar styles based on selected custom theme
   const getAppbarClass = () => {
     switch (appbarStyle) {
-      case "solid":
-        return "bg-white border-b border-slate-200 dark:bg-slate-900 dark:border-slate-800 shadow-sm";
-      case "minimal":
-        return "bg-transparent border-none";
+      case "solid":   return "bg-white border-b border-slate-200 dark:bg-slate-900 dark:border-slate-800 shadow-sm";
+      case "minimal": return "bg-transparent border-none";
       case "glass":
-      default:
-        return "glass-panel bg-white/75 border-b border-slate-200/50 shadow-sm backdrop-blur-md";
+      default:        return "glass-panel bg-white/75 border-b border-slate-200/50 shadow-sm backdrop-blur-md";
     }
   };
 
   return (
-    <div className={`min-h-screen flex flex-row bg-slate-50 text-slate-800 transition-all font-outfit duration-300`}>
-      {/* 1. Desktop Sidebar Navigation */}
-      <aside 
-        className={`hidden md:flex flex-col border-r border-slate-200/60 bg-slate-900 text-white relative transition-all duration-300 z-20 shrink-0 ${
+    <div className="h-screen overflow-hidden flex flex-row bg-slate-50 text-slate-800 transition-all font-outfit duration-300">
+
+      {/* ── 1. Desktop Sidebar ─────────────────────────────────────────────── */}
+      {/*
+        FIX: sidebar ko teen sections mein divide kiya:
+          - Header  (shrink-0) — logo
+          - Nav     (flex-1, overflow-y-auto) — menu items, scroll karta hai
+          - Footer  (shrink-0) — logout button, HAMESHA bottom pe fixed rehta hai
+        
+        Collapse arrow bhi footer ke upar absolutely position hai sidebar ke andar,
+        taaki scroll ke saath neeche na jaye.
+      */}
+      <aside
+        className={`hidden md:flex flex-col h-screen sticky top-0 border-r border-slate-200/60 bg-slate-900 text-white relative transition-all duration-300 z-20 shrink-0 ${
           sidebarExpanded ? "w-64" : "w-20"
         }`}
       >
-        {/* Sidebar Header Title */}
-        <div className="min-h-20 flex items-center justify-between px-5 py-3 border-b border-slate-800/80">
+        {/* Sidebar Header — Logo */}
+        <div className="shrink-0 min-h-20 flex items-center justify-between px-5 py-3 border-b border-slate-800/80">
           {sidebarExpanded ? (
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               className="flex items-center gap-2"
             >
               <div className="bg-primary/20 border border-primary/45 rounded-xl px-2 py-2">
-                <Image src="/image_44ed8e77-Photoroom.png" alt="ADIXON Logo" width={200} height={200} className="h-11 w-36 rounded-sm object-contain" />
+                <Image
+                  src="/image_44ed8e77-Photoroom.png"
+                  alt="ADIXON Logo"
+                  width={200}
+                  height={200}
+                  className="h-11 w-36 rounded-sm object-contain"
+                />
               </div>
-              
             </motion.div>
           ) : (
             <div className="mx-auto p-2 bg-primary/20 border border-primary/45 rounded-xl">
@@ -175,23 +173,23 @@ export default function DashboardLayout({ children }) {
           )}
         </div>
 
-        {/* Navigation Link list */}
-        <nav className="flex-1 px-3 py-5 space-y-2 overflow-y-auto">
+        {/* Sidebar Nav — flex-1 + overflow-y-auto taaki sirf nav scroll kare */}
+        <nav className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-5 space-y-2">
           {menuItems.map((item) => {
             const isActive = pathname === item.path;
             const IconComponent = item.icon;
-            
+
             return (
               <button
                 key={item.path}
                 onClick={() => router.push(item.path)}
                 className={`w-full relative flex items-center gap-3.5 py-3 px-4 rounded-xl text-sm font-medium transition-all group focus:outline-none cursor-pointer ${
-                  isActive 
-                    ? "text-white" 
+                  isActive
+                    ? "text-white"
                     : "text-slate-400 hover:text-white hover:bg-slate-800/50"
                 }`}
               >
-                {/* Active Background Pill (Framer Motion) */}
+                {/* Active pill animation */}
                 {isActive && (
                   <motion.div
                     layoutId="activeSidePill"
@@ -201,16 +199,16 @@ export default function DashboardLayout({ children }) {
                 )}
 
                 <div className="relative z-10 shrink-0">
-                  <IconComponent 
+                  <IconComponent
                     className={`h-5 w-5 transition-transform duration-300 group-hover:scale-110 ${
                       isActive ? "text-white" : "text-slate-400 group-hover:text-white"
-                    }`} 
+                    }`}
                     fill={iconStyle === "filled" && isActive ? "currentColor" : "none"}
                   />
                 </div>
 
                 {sidebarExpanded && (
-                  <motion.span 
+                  <motion.span
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     className="relative z-10 font-light truncate"
@@ -219,7 +217,7 @@ export default function DashboardLayout({ children }) {
                   </motion.span>
                 )}
 
-                {/* Tooltip for collapsed mode */}
+                {/* Collapsed mode tooltip */}
                 {!sidebarExpanded && (
                   <div className="absolute left-24 bg-slate-950 text-white text-xs px-2.5 py-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap shadow-xl border border-slate-800 z-30 font-light">
                     {item.name}
@@ -230,31 +228,40 @@ export default function DashboardLayout({ children }) {
           })}
         </nav>
 
-        {/* Sidebar Footer Logout Button */}
-        <div className="p-4 border-t border-slate-800/80">
+        {/*
+          Sidebar Footer — shrink-0 taaki hamesha bottom pe rahe, scroll na ho.
+          Logout button yahan hai.
+          Collapse arrow button bhi yahan ke upar position kiya hai.
+        */}
+        <div className="shrink-0 border-t border-slate-800/80">
+          {/* Collapse toggle arrow — footer ke top edge pe centered */}
           <button
-            onClick={() => setShowLogoutConfirm(true)}
-            className="w-full flex items-center gap-3.5 py-3 px-4 rounded-xl text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 text-sm font-medium transition-all focus:outline-none cursor-pointer group"
+            onClick={() => setSidebarExpanded(!sidebarExpanded)}
+            className="absolute -right-3.5 bottom-[72px] bg-slate-900 border border-slate-700 h-7 w-7 rounded-full flex items-center justify-center text-slate-400 hover:text-white focus:outline-none cursor-pointer hover:border-slate-500 shadow-md z-10"
           >
-            <div className="shrink-0">
-              <LogOut className="h-5 w-5 group-hover:rotate-12 transition-transform text-slate-400 group-hover:text-rose-400" />
-            </div>
-            {sidebarExpanded && (
-              <span className="font-light truncate">Secre Sign Out</span>
-            )}
+            {sidebarExpanded
+              ? <ChevronLeft className="h-4 w-4" />
+              : <ChevronRight className="h-4 w-4" />}
           </button>
-        </div>
 
-        {/* Toggle Collapse Arrow Button */}
-        <button
-          onClick={() => setSidebarExpanded(!sidebarExpanded)}
-          className="absolute bottom-20 -right-3.5 bg-slate-900 border border-slate-700 h-7 w-7 rounded-full flex items-center justify-center text-slate-400 hover:text-white focus:outline-none cursor-pointer hover:border-slate-500 shadow-md"
-        >
-          {sidebarExpanded ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-        </button>
+          {/* Logout button */}
+          <div className="p-4">
+            <button
+              onClick={() => setShowLogoutConfirm(true)}
+              className="w-full flex items-center gap-3.5 py-3 px-4 rounded-xl text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 text-sm font-medium transition-all focus:outline-none cursor-pointer group"
+            >
+              <div className="shrink-0">
+                <LogOut className="h-5 w-5 group-hover:rotate-12 transition-transform text-slate-400 group-hover:text-rose-400" />
+              </div>
+              {sidebarExpanded && (
+                <span className="font-light truncate">Secure Sign Out</span>
+              )}
+            </button>
+          </div>
+        </div>
       </aside>
 
-      {/* 2. Mobile Drawer Navigation Overlay */}
+      {/* ── 2. Mobile Drawer Sidebar ───────────────────────────────────────── */}
       <AnimatePresence>
         {mobileSidebarOpen && (
           <>
@@ -272,13 +279,20 @@ export default function DashboardLayout({ children }) {
               transition={{ type: "tween", duration: 0.3 }}
               className="fixed inset-y-0 left-0 w-64 bg-slate-900 text-white z-40 flex flex-col md:hidden border-r border-slate-800"
             >
-              <div className="min-h-20 flex items-center justify-between px-5 py-3 border-b border-slate-800">
+              {/* Mobile Header */}
+              <div className="shrink-0 min-h-20 flex items-center justify-between px-5 py-3 border-b border-slate-800">
                 <div className="flex items-center gap-2">
                   <div className="bg-primary/20 border border-primary/45 rounded-xl px-2 py-2">
-                    <Image src="/image_44ed8e77-Photoroom.png" alt="ADIXON Logo" width={200} height={200} className="h-11 w-36 rounded-sm object-contain" />
+                    <Image
+                      src="/image_44ed8e77-Photoroom.png"
+                      alt="ADIXON Logo"
+                      width={200}
+                      height={200}
+                      className="h-11 w-36 rounded-sm object-contain"
+                    />
                   </div>
                 </div>
-                <button 
+                <button
                   onClick={() => setMobileSidebarOpen(false)}
                   className="p-1 rounded-lg text-slate-400 hover:text-white focus:outline-none"
                 >
@@ -286,7 +300,8 @@ export default function DashboardLayout({ children }) {
                 </button>
               </div>
 
-              <nav className="flex-1 px-3 py-5 space-y-2 overflow-y-auto">
+              {/* Mobile Nav — flex-1 scroll */}
+              <nav className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-5 space-y-2">
                 {menuItems.map((item) => {
                   const isActive = pathname === item.path;
                   const IconComponent = item.icon;
@@ -301,14 +316,18 @@ export default function DashboardLayout({ children }) {
                         isActive ? "text-white bg-primary" : "text-slate-400 hover:text-white"
                       }`}
                     >
-                      <IconComponent className="h-5 w-5 shrink-0" fill={iconStyle === "filled" && isActive ? "currentColor" : "none"} />
+                      <IconComponent
+                        className="h-5 w-5 shrink-0"
+                        fill={iconStyle === "filled" && isActive ? "currentColor" : "none"}
+                      />
                       <span className="font-light">{item.name}</span>
                     </button>
                   );
                 })}
               </nav>
 
-              <div className="p-4 border-t border-slate-800">
+              {/* Mobile Footer — shrink-0, hamesha bottom pe */}
+              <div className="shrink-0 p-4 border-t border-slate-800">
                 <button
                   onClick={() => {
                     setMobileSidebarOpen(false);
@@ -317,7 +336,7 @@ export default function DashboardLayout({ children }) {
                   className="w-full flex items-center gap-3.5 py-3 px-4 rounded-xl text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 text-sm font-medium transition-all focus:outline-none cursor-pointer"
                 >
                   <LogOut className="h-5 w-5 shrink-0" />
-                  <span className="font-light">Secre Sign Out</span>
+                  <span className="font-light">Secure Sign Out</span>
                 </button>
               </div>
             </motion.aside>
@@ -325,12 +344,13 @@ export default function DashboardLayout({ children }) {
         )}
       </AnimatePresence>
 
-      {/* 3. Main Frame Workspace */}
-      <div className="flex-1 flex flex-col min-w-0 relative">
-        {/* Dynamic Header / AppBar */}
+      {/* ── 3. Main Content Area ───────────────────────────────────────────── */}
+      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden relative">
+
+        {/* Sticky AppBar / Header */}
         <header className={`h-16 flex items-center justify-between px-6 md:px-8 z-10 shrink-0 sticky top-0 transition-all ${getAppbarClass()}`}>
-          {/* Left Section: Page name & hamburger */}
           <div className="flex items-center gap-4">
+            {/* Mobile hamburger */}
             <button
               onClick={() => setMobileSidebarOpen(true)}
               className="p-1.5 rounded-lg border border-slate-200 bg-white/80 hover:bg-slate-100 text-slate-700 md:hidden focus:outline-none cursor-pointer shadow-sm"
@@ -342,17 +362,17 @@ export default function DashboardLayout({ children }) {
             </h1>
           </div>
 
-          {/* Right Section: Alerts & Administrator Details */}
-          
+          {/* Right section: notifications / user info (placeholder) */}
+          <div />
         </header>
 
-        {/* 4. Active Sub-page content */}
-        <main className="flex-1 p-5 sm:p-6 md:p-8 overflow-y-auto w-full max-w-7xl mx-auto flex flex-col gap-6">
+        {/* Page Content */}
+        <main className="flex-1 p-5 sm:p-6 md:p-8 overflow-y-auto w-full flex flex-col gap-6">
           {children}
         </main>
       </div>
 
-      {/* 5. Secure Logout Confirmation Overlay Dialog */}
+      {/* ── 4. Logout Confirmation Modal ──────────────────────────────────── */}
       <AnimatePresence>
         {showLogoutConfirm && (
           <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
@@ -369,14 +389,11 @@ export default function DashboardLayout({ children }) {
               exit={{ opacity: 0, scale: 0.95, y: 15 }}
               className="bg-white border border-slate-200 w-full max-w-md rounded-2xl p-6 shadow-2xl z-10 relative overflow-hidden"
             >
-              {/* Highlight header accent */}
               <div className="absolute top-0 left-0 right-0 h-[3px] bg-rose-500" />
-              
-              <h3 className="text-lg font-bold text-slate-800 font-outfit mb-2">Secre Sign Out</h3>
+              <h3 className="text-lg font-bold text-slate-800 font-outfit mb-2">Secure Sign Out</h3>
               <p className="text-sm text-slate-500 leading-relaxed">
                 Are you absolutely sure you want to log out of your AuraHealth clinical portal? You will need to verify your credentials again.
               </p>
-              
               <div className="mt-6 flex justify-end gap-3">
                 <button
                   onClick={() => setShowLogoutConfirm(false)}

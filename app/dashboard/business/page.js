@@ -20,12 +20,12 @@ import {
 export default function BusinessSettings() {
   // 1. Clinic General Profile details
   const [profile, setProfile] = useState({
-    name: "AuraHealth Specialty Clinic",
+    name: "Adixon Clinic",
     tagline: "Advanced Diagnostics and Comprehensive Healthcare Services",
     license: "LIC-2026-90432-MD",
     phone: "+1 555-0100",
-    email: "ops@aurahealth.com",
-    website: "https://aurahealth-clinic.com",
+    email: "Adixon@gmail.com",
+    website: "https://adixon-clinic.com",
     currency: "USD ($)",
     timezone: "GMT-5 (Eastern Standard Time)"
   });

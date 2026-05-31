@@ -46,6 +46,7 @@ const templateTabs = [
 const emptyForms = {
   Medicine: {
     title: "",
+    medicine_name: "",
     total_quantity: "",
     frequency: "",
     route_form: "",
@@ -53,8 +54,8 @@ const emptyForms = {
     instructions: "",
     additional_comments: "",
   },
-  "Lab Test": { title: "", content: "" },
-  Instruction: { title: "", content: "" },
+  "Lab Test": { title: "", lab_test_name: "", content: "" },
+  Instruction: { title: "", instruction_name: "", content: "" },
 };
 
 const frequencies = [
@@ -202,6 +203,7 @@ function buildContentSummary(template) {
   if (template?.type === "Medicine") {
     const item = Array.isArray(parsed) ? parsed[0] : parsed;
     return [
+      item?.medicine_name || item?.name,
       item?.total_quantity ? `Qty ${item.total_quantity}` : null,
       item?.frequency,
       item?.route_form,
@@ -210,8 +212,12 @@ function buildContentSummary(template) {
   }
 
   if (template?.type === "Lab Test") {
-    const comment = parsed?.additional_comments || parsed?.description || parsed;
+    const comment = [parsed?.lab_test_name || parsed?.test_name, parsed?.content || parsed?.additional_comments || parsed?.description || (typeof parsed === "string" ? parsed : null)].filter(Boolean).join(" | ");
     return typeof comment === "string" && comment ? comment : "No additional comments.";
+  }
+
+  if (template?.type === "Instruction") {
+    return [parsed?.instruction_name, parsed?.content || parsed?.description || (typeof parsed === "string" ? parsed : null)].filter(Boolean).join(" | ") || "No instruction content.";
   }
 
   return parseTemplateContent(template?.content);
@@ -229,6 +235,7 @@ function TemplateContentDetail({ template }) {
           <div key={index} className="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {[
+                ["Medicine Name", medicine?.medicine_name || medicine?.name],
                 ["Total Qty", medicine?.total_quantity],
                 ["Frequency", medicine?.frequency],
                 ["Route / Form", medicine?.route_form],
@@ -254,19 +261,26 @@ function TemplateContentDetail({ template }) {
 
   if (template?.type === "Lab Test") {
     return (
-      <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
-        <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-slate-700">
-          {parsed?.additional_comments || parsed?.description || parsed || "No additional comments."}
-        </p>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <InfoBlock label="Template Name" value={parsed?.lab_test_name || parsed?.test_name} />
+        <InfoBlock label="Content" value={parsed?.content || parsed?.additional_comments || parsed?.description || parsed} wide />
       </div>
     );
   }
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
-      <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-slate-700">
-        {parseTemplateContent(template?.content)}
-      </p>
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <InfoBlock label="Template Name" value={parsed?.instruction_name} />
+      <InfoBlock label="Content" value={parsed?.content || parsed?.description || parseTemplateContent(template?.content)} wide />
+    </div>
+  );
+}
+
+function InfoBlock({ label, value, wide = false }) {
+  return (
+    <div className={`rounded-lg border border-slate-200 bg-slate-50/70 p-3 ${wide ? "sm:col-span-2" : ""}`}>
+      <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">{label}</span>
+      <span className="mt-1 block break-words text-sm font-semibold text-slate-700">{value || "Not available"}</span>
     </div>
   );
 }
@@ -502,7 +516,8 @@ export default function CreateCertificatePage() {
       [templateType]:
         templateType === "Medicine"
           ? {
-              title: selectedTemplate.title || medicineContent?.name || "",
+              title: selectedTemplate.title || "",
+              medicine_name: medicineContent?.medicine_name || medicineContent?.name || "",
               total_quantity: medicineContent?.total_quantity || "",
               frequency: medicineContent?.frequency || "",
               route_form: medicineContent?.route_form || "",
@@ -512,12 +527,14 @@ export default function CreateCertificatePage() {
             }
           : templateType === "Lab Test"
             ? {
-                title: selectedTemplate.title || labContent?.test_name || "",
-                content: labContent?.additional_comments || labContent?.description || "",
+                title: selectedTemplate.title || "",
+                lab_test_name: labContent?.lab_test_name || labContent?.test_name || "",
+                content: labContent?.content || labContent?.additional_comments || labContent?.description || "",
               }
             : {
                 title: selectedTemplate.title || "",
-                content: parseTemplateContent(selectedTemplate.content),
+                instruction_name: labContent?.instruction_name || "",
+                content: labContent?.content || labContent?.description || parseTemplateContent(selectedTemplate.content),
               },
     }));
     setEditingTemplateId(templateId);
@@ -538,16 +555,21 @@ export default function CreateCertificatePage() {
     }
 
     if (activeType === "Medicine") {
+      if (!fieldValue(data.medicine_name).trim()) nextErrors.medicine_name = "Medicine name is required.";
       if (!fieldValue(data.total_quantity).trim()) nextErrors.total_quantity = "Quantity is required.";
       if (!fieldValue(data.frequency).trim()) nextErrors.frequency = "Frequency is required.";
       if (!fieldValue(data.route_form).trim()) nextErrors.route_form = "Route/Form is required.";
       if (!fieldValue(data.no_of_days).trim()) nextErrors.no_of_days = "No. of days is required.";
       if (!fieldValue(data.instructions).trim()) nextErrors.instructions = "Instruction is required.";
+    } else if (activeType === "Lab Test") {
+      if (!fieldValue(data.lab_test_name).trim()) nextErrors.lab_test_name = "Template name is required.";
+      if (!fieldValue(data.content).trim()) nextErrors.content = "Content is required.";
     } else if (activeType === "Instruction") {
+      if (!fieldValue(data.instruction_name).trim()) nextErrors.instruction_name = "Template name is required.";
       if (!fieldValue(data.content).trim()) {
-        nextErrors.content = "Description is required.";
+        nextErrors.content = "Content is required.";
       } else if (fieldValue(data.content).trim().length < 5) {
-        nextErrors.content = "Description must be at least 5 characters.";
+        nextErrors.content = "Content must be at least 5 characters.";
       }
     }
 
@@ -599,6 +621,8 @@ export default function CreateCertificatePage() {
     try {
       const contentByType = {
         Medicine: {
+          name: fieldValue(form.medicine_name).trim(),
+          medicine_name: fieldValue(form.medicine_name).trim(),
           total_quantity: fieldValue(form.total_quantity).trim(),
 
           frequency: fieldValue(form.frequency).trim(),
@@ -612,9 +636,13 @@ export default function CreateCertificatePage() {
           additional_comments: fieldValue(form.additional_comments).trim() || null,
         },
         "Lab Test": {
-          additional_comments: fieldValue(form.content).trim() || null,
+          lab_test_name: fieldValue(form.lab_test_name).trim(),
+          content: fieldValue(form.content).trim(),
         },
-        Instruction: { description: fieldValue(form.content).trim() },
+        Instruction: {
+          instruction_name: fieldValue(form.instruction_name).trim(),
+          content: fieldValue(form.content).trim(),
+        },
       };
 
       const payload = {
@@ -912,7 +940,7 @@ export default function CreateCertificatePage() {
                   </div>
                 </div>
                 <FormField
-                  label={activeType === "Medicine" ? "Medicine Name" : activeType === "Lab Test" ? "Test Name" : "Title"}
+                  label="Template Title"
                   name="title"
                   value={form.title}
                   onChange={updateField}
@@ -925,6 +953,15 @@ export default function CreateCertificatePage() {
               {activeType === "Medicine" ? (
                 <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 md:p-5">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      label="Medicine Name"
+                      name="medicine_name"
+                      value={form.medicine_name}
+                      onChange={updateField}
+                      error={errors.medicine_name}
+                      required
+                      placeholder="Paracetamol 500mg"
+                    />
                     <FormField
                       label="Total Qty"
                       name="total_quantity"
@@ -984,26 +1021,49 @@ export default function CreateCertificatePage() {
                   </div>
                 </div>
               ) : activeType === "Lab Test" ? (
-                <FormField
-                  label="Additional Comments"
-                  name="content"
-                  value={form.content}
-                  onChange={updateField}
-                  error={errors.content}
-                  textarea
-                  placeholder="Preparation notes, fasting requirement, or remarks..."
-                />
+                <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 md:p-5 space-y-4">
+                  <FormField
+                    label="Template Name"
+                    name="lab_test_name"
+                    value={form.lab_test_name}
+                    onChange={updateField}
+                    error={errors.lab_test_name}
+                    required
+                    placeholder="CBC Blood Test"
+                  />
+                  <FormField
+                    label="Content"
+                    name="content"
+                    value={form.content}
+                    onChange={updateField}
+                    error={errors.content}
+                    required
+                    textarea
+                    placeholder="Preparation notes, fasting requirement, or remarks..."
+                  />
+                </div>
               ) : (
-                <FormField
-                  label="Description"
-                  name="content"
-                  value={form.content}
-                  onChange={updateField}
-                  error={errors.content}
-                  required
-                  textarea
-                  placeholder={activeConfig.contentPlaceholder}
-                />
+                <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 md:p-5 space-y-4">
+                  <FormField
+                    label="Template Name"
+                    name="instruction_name"
+                    value={form.instruction_name}
+                    onChange={updateField}
+                    error={errors.instruction_name}
+                    required
+                    placeholder="Epley Maneuver"
+                  />
+                  <FormField
+                    label="Content"
+                    name="content"
+                    value={form.content}
+                    onChange={updateField}
+                    error={errors.content}
+                    required
+                    textarea
+                    placeholder={activeConfig.contentPlaceholder}
+                  />
+                </div>
               )}
             </div>
 
