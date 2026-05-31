@@ -1,18 +1,23 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import api from "@/utils/api";
 import {
   AlertCircle,
   Beaker,
   CheckCircle,
   FileText,
+  Mail,
   NotebookPen,
   Pencil,
+  Phone,
   RefreshCw,
+  Search,
   Send,
   Sparkles,
   Trash2,
+  UserRound,
   X,
 } from "lucide-react";
 
@@ -274,6 +279,43 @@ function fieldValue(value) {
   return typeof value === "string" ? value : value == null ? "" : String(value);
 }
 
+function readDoctorCodes(template) {
+  const value = template?.doctor_code;
+  if (!value) return [];
+  if (Array.isArray(value)) return value.map((code) => String(code).trim()).filter(Boolean).slice(0, 1);
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) {
+        return parsed.map((code) => String(code).trim()).filter(Boolean).slice(0, 1);
+      }
+    } catch {
+      return value.split(",").map((code) => code.trim()).filter(Boolean).slice(0, 1);
+    }
+  }
+  return [];
+}
+
+function getDoctorCode(doctor) {
+  return doctor?.doctor_code || doctor?.user_code || doctor?.id || doctor?._id;
+}
+
+function getDoctorName(doctor) {
+  return [doctor?.first_name, doctor?.last_name].filter(Boolean).join(" ") || doctor?.name || "Unnamed Doctor";
+}
+
+function getDoctorEmail(doctor) {
+  return doctor?.email || doctor?.email_address || "No email";
+}
+
+function getDoctorPhone(doctor) {
+  return doctor?.phone || doctor?.mobile_number || doctor?.phone_number || doctor?.mobile || "No phone";
+}
+
+function buildDoctorCodePayload(codes) {
+  return codes.map((code) => String(code).trim()).filter(Boolean).slice(0, 1).join(",");
+}
+
 export default function CreateCertificatePage() {
   const [activeType, setActiveType] = useState("Medicine");
   const [forms, setForms] = useState(emptyForms);
@@ -288,6 +330,11 @@ export default function CreateCertificatePage() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
+  const [doctorModalOpen, setDoctorModalOpen] = useState(false);
+  const [doctors, setDoctors] = useState([]);
+  const [doctorsLoading, setDoctorsLoading] = useState(false);
+  const [doctorSearch, setDoctorSearch] = useState("");
+  const [selectedDoctorCodes, setSelectedDoctorCodes] = useState([]);
 
   const activeConfig = useMemo(
     () => templateTabs.find((tab) => tab.id === activeType),
@@ -308,6 +355,26 @@ export default function CreateCertificatePage() {
       year: "numeric",
     });
   };
+
+  const loadDoctors = useCallback(async () => {
+    setDoctorsLoading(true);
+
+    try {
+      const { data } = await api.get("/admin/users");
+      if (data.status === false) {
+        throw new Error(data.message || "Unable to fetch doctors.");
+      }
+
+      const doctorUsers = (data?.data || []).filter((user) => user.role === "Doctor");
+      setDoctors(doctorUsers);
+    } catch (error) {
+      console.error("Error fetching doctors:", error);
+      setDoctors([]);
+      triggerToast(error.message || "Unable to fetch doctors.", "error");
+    } finally {
+      setDoctorsLoading(false);
+    }
+  }, []);
 
   const loadTemplates = useCallback(async (type) => {
     setListLoading(true);
@@ -357,6 +424,42 @@ export default function CreateCertificatePage() {
     });
   }, [activeType, loadTemplates]);
 
+  useEffect(() => {
+    if (selectedTemplate && readDoctorCodes(selectedTemplate).length > 0 && doctors.length === 0 && !doctorsLoading) {
+      queueMicrotask(() => {
+        loadDoctors();
+      });
+    }
+  }, [selectedTemplate, doctors.length, doctorsLoading, loadDoctors]);
+
+  const filteredDoctors = useMemo(() => {
+    const query = doctorSearch.trim().toLowerCase();
+    if (!query) return doctors;
+
+    return doctors.filter((doctor) =>
+      [
+        getDoctorCode(doctor),
+        getDoctorName(doctor),
+        getDoctorEmail(doctor),
+        getDoctorPhone(doctor),
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase()
+        .includes(query)
+    );
+  }, [doctorSearch, doctors]);
+
+  const selectedDoctors = useMemo(
+    () => doctors.filter((doctor) => selectedDoctorCodes.includes(getDoctorCode(doctor))),
+    [doctors, selectedDoctorCodes]
+  );
+
+  const doctorsByCode = useMemo(
+    () => new Map(doctors.map((doctor) => [getDoctorCode(doctor), doctor]).filter(([doctorCode]) => doctorCode)),
+    [doctors]
+  );
+
   const updateField = (event) => {
     const { name, value } = event.target;
     setForms((current) => ({
@@ -379,6 +482,7 @@ export default function CreateCertificatePage() {
       [activeType]: { ...emptyForms[activeType] },
     }));
     setEditingTemplateId(null);
+    setSelectedDoctorCodes([]);
     setErrors({});
   };
 
@@ -417,9 +521,10 @@ export default function CreateCertificatePage() {
               },
     }));
     setEditingTemplateId(templateId);
+    setSelectedDoctorCodes(readDoctorCodes(selectedTemplate));
     setMobileDetailOpen(false);
     setErrors({});
-    triggerToast("Template loaded in form. Make changes and submit.");
+    triggerToast("Template loaded. Update fields, then confirm doctor.");
   };
 
   const validateForm = () => {
@@ -450,11 +555,42 @@ export default function CreateCertificatePage() {
     return Object.keys(nextErrors).length === 0;
   };
 
+  const openDoctorSelection = async (doctorCodes = selectedDoctorCodes) => {
+    setSelectedDoctorCodes(doctorCodes.map((code) => String(code).trim()).filter(Boolean).slice(0, 1));
+    setDoctorModalOpen(true);
+    setDoctorSearch("");
+
+    if (doctors.length === 0) {
+      await loadDoctors();
+    }
+  };
+
+  const toggleDoctor = (doctorCode) => {
+    if (!doctorCode) return;
+    setSelectedDoctorCodes((current) => (current.includes(doctorCode) ? [] : [doctorCode]));
+  };
+
+  const confirmDoctorSelection = () => {
+    if (selectedDoctorCodes.length === 0) {
+      triggerToast("Please select a doctor.", "error");
+      return;
+    }
+
+    setDoctorModalOpen(false);
+    triggerToast("Doctor selected.");
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
 
     if (!validateForm()) {
       triggerToast("Please fix highlighted fields.", "error");
+      return;
+    }
+
+    if (selectedDoctorCodes.length === 0) {
+      triggerToast("Please choose a doctor.", "error");
+      await openDoctorSelection();
       return;
     }
 
@@ -485,6 +621,7 @@ export default function CreateCertificatePage() {
         
         type: activeType,
         title: fieldValue(form.title).trim(),
+        doctor_code: buildDoctorCodePayload(selectedDoctorCodes),
         content:  JSON.stringify(contentByType[activeType]),
       };
       console.log("payload:",payload);
@@ -572,6 +709,8 @@ export default function CreateCertificatePage() {
       );
     }
 
+    const assignedDoctorCodes = readDoctorCodes(selectedTemplate);
+
     return (
       <div className="p-5 md:p-6 space-y-5">
         <div className="rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-5">
@@ -634,6 +773,33 @@ export default function CreateCertificatePage() {
           </span>
           <div className="mt-3">
             <TemplateContentDetail template={selectedTemplate} />
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            Doctor
+          </span>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {assignedDoctorCodes.length === 0 ? (
+              <span className="text-xs font-semibold text-slate-400">No doctor assigned.</span>
+            ) : doctorsLoading && doctors.length === 0 ? (
+              <span className="text-xs font-semibold text-slate-400">Loading doctor...</span>
+            ) : (
+              assignedDoctorCodes.map((doctorCode) => {
+                const doctor = doctorsByCode.get(doctorCode);
+                return (
+                  <Link
+                    key={doctorCode}
+                    href={`/dashboard/doctors/${doctor?.user_code || doctorCode}`}
+                    className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700 transition-colors hover:border-primary/30 hover:bg-primary/10 hover:text-primary"
+                  >
+                    <UserRound className="h-3.5 w-3.5" />
+                    Dr. {doctor ? getDoctorName(doctor) : doctorCode}
+                  </Link>
+                );
+              })
+            )}
           </div>
         </div>
 
@@ -854,6 +1020,15 @@ export default function CreateCertificatePage() {
                 </button>
               )}
               <button
+                type="button"
+                onClick={() => openDoctorSelection()}
+                disabled={submitting}
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-primary/20 bg-primary/10 px-5 py-2.5 text-sm font-semibold text-primary shadow-sm hover:bg-primary/15 focus:outline-none disabled:opacity-60"
+              >
+                <UserRound className="h-4 w-4" />
+                Doctor {selectedDoctorCodes.length > 0 ? "(1)" : ""}
+              </button>
+              <button
                 type="submit"
                 disabled={submitting}
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-primary/15 hover:bg-primary-hover focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed"
@@ -863,7 +1038,7 @@ export default function CreateCertificatePage() {
                 ) : (
                   <Send className="h-4 w-4" />
                 )}
-                {editingTemplateId ? "Update Template" : "Submit"}
+                {editingTemplateId ? "Update Template" : "Create Template"}
               </button>
             </div>
           </form>
@@ -1004,6 +1179,111 @@ export default function CreateCertificatePage() {
           )}
         </div>
       </div>
+
+      {doctorModalOpen && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
+          <button type="button" aria-label="Close doctor selection" onClick={() => setDoctorModalOpen(false)} className="absolute inset-0 bg-slate-950/60" />
+          <div className="relative flex max-h-[88vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+            <div className="border-b border-slate-100 bg-slate-50 px-5 py-4">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h3 className="text-lg font-bold text-slate-800 font-outfit">Choose Doctor</h3>
+                </div>
+                <button type="button" onClick={() => setDoctorModalOpen(false)} className="rounded-xl border border-slate-200 bg-white p-2 text-slate-500 hover:bg-slate-50 focus:outline-none">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              {selectedDoctors.length > 0 && (
+                <div className="mt-4 flex max-h-20 flex-wrap gap-2 overflow-y-auto">
+                  {selectedDoctors.map((doctor) => (
+                    <button
+                      key={getDoctorCode(doctor)}
+                      type="button"
+                      onClick={() => toggleDoctor(getDoctorCode(doctor))}
+                      className="inline-flex items-center gap-1 rounded-lg border border-primary/20 bg-primary/10 px-2.5 py-1 text-[11px] font-bold text-primary"
+                    >
+                      Dr. {getDoctorName(doctor)}
+                      <X className="h-3 w-3" />
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <div className="relative mt-4">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <input
+                  value={doctorSearch}
+                  onChange={(event) => setDoctorSearch(event.target.value)}
+                  placeholder="Search doctors by name, email, or phone..."
+                  className="w-full rounded-xl border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm text-slate-700 placeholder-slate-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                />
+              </div>
+            </div>
+
+            <div className="admin-scroll-panel min-h-0 flex-1 overflow-y-auto p-4 space-y-3">
+              {doctorsLoading ? (
+                <div className="py-10 text-center text-xs font-semibold text-slate-400">Loading doctors...</div>
+              ) : filteredDoctors.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-slate-200 p-8 text-center text-xs font-semibold text-slate-400">
+                  No doctors found.
+                </div>
+              ) : (
+                filteredDoctors.map((doctor) => {
+                  const doctorCode = getDoctorCode(doctor);
+                  const checked = selectedDoctorCodes.includes(doctorCode);
+                  const codeMissing = !doctorCode;
+
+                  return (
+                    <label key={doctorCode || doctor.user_code} className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition-all ${
+                      checked ? "border-primary bg-primary/5" : "border-slate-200 bg-white hover:border-primary/40"
+                    }`}>
+                      <input
+                        type="radio"
+                        checked={checked}
+                        disabled={codeMissing}
+                        onChange={() => toggleDoctor(doctorCode)}
+                        className="mt-1 h-4 w-4 rounded-full border-slate-300 text-primary focus:ring-primary disabled:opacity-40"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                          <span className="truncate text-sm font-bold text-slate-800">Dr. {getDoctorName(doctor)}</span>
+                          {codeMissing && <span className="text-xs font-semibold text-rose-500">Doctor code missing</span>}
+                        </div>
+                        <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-500">
+                          <span className="inline-flex items-center gap-1">
+                            <Mail className="h-3.5 w-3.5 text-slate-400" />
+                            {getDoctorEmail(doctor)}
+                          </span>
+                          <span className="inline-flex items-center gap-1">
+                            <Phone className="h-3.5 w-3.5 text-slate-400" />
+                            {getDoctorPhone(doctor)}
+                          </span>
+                        </div>
+                      </div>
+                    </label>
+                  );
+                })
+              )}
+            </div>
+
+            <div className="border-t border-slate-100 bg-slate-50 px-5 py-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <span className="text-xs font-semibold text-slate-500">
+                {selectedDoctorCodes.length === 1 ? "1 doctor selected" : "No doctor selected"}
+              </span>
+              <div className="flex justify-end gap-2">
+                <button type="button" onClick={() => setDoctorModalOpen(false)} disabled={submitting} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-60">
+                  Cancel
+                </button>
+                <button type="button" onClick={confirmDoctorSelection} disabled={submitting} className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-white hover:bg-primary-hover disabled:opacity-60">
+                  <CheckCircle className="h-3.5 w-3.5" />
+                  Confirm
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
